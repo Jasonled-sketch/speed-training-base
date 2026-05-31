@@ -1801,6 +1801,8 @@
           <div class="small" id="childName">修煉者</div>
         </div>
         <button class="btn sm" id="btnSwitchToParent" style="display:none">切換指揮官視角</button>
+        <button class="btn sm gold" id="btnExitSim" style="display:none">← 返回管理者</button>
+        <button class="btn sm" id="btnResetSim" style="display:none;background:#7f1d1d;color:#fecaca;border-color:#991b1b">重置沙盒</button>
         <button class="btn sm ghost" id="btnLogoutChild">登出</button>
       </div>
     </div>
@@ -2276,6 +2278,7 @@
           <div class="small" id="parentName">指揮官</div>
         </div>
         <button class="btn sm" id="btnSwitchToChild" style="display:none">切換修煉者視角</button>
+        <button class="btn sm" id="btnSimChild" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border-color:#5b21b6">🔧 模擬孩子(Debug)</button>
         <button class="btn sm ghost" id="btnLogoutParent">登出</button>
       </div>
     </div>
@@ -4282,6 +4285,12 @@ function autoBindLocalDemo(){
 }
 
 function refreshRoleSwitchButtons(){
+  // 模擬孩子沙盒模式:只顯示「返回管理者」,隱藏 LOCAL 雙視角切換鈕避免混淆
+  if (STATE.simChildMode){
+    $("#btnSwitchToParent").style.display = "none";
+    $("#btnSwitchToChild").style.display  = "none";
+    return;
+  }
   const inLocal = STATE.mode === "LOCAL";
   $("#btnSwitchToParent").style.display = (inLocal && STATE.user?.role === "child") ? "" : "none";
   $("#btnSwitchToChild").style.display  = (inLocal && STATE.user?.role === "parent") ? "" : "none";
@@ -10239,6 +10248,100 @@ renderParentAll = function(){
 /* ===========================================================
    初始化：若 LOCAL 已有訪客帳號，自動還原
    =========================================================== */
+/* ===========================================================
+   管理者專用:模擬孩子沙盒(Debug)
+   - 完全本機(LOCAL),不碰雲端、不影響真實孩子 euflish 的資料
+   - 進入後孩子端所有功能(副本/裝備/寵物/簽到/成就...)都能測
+   =========================================================== */
+const SIM_CHILD_UID = "__sim_child__";
+
+async function enterSimChild(){
+  // 保存真實狀態
+  STATE._realUser = STATE.user;
+  STATE._realMode = STATE.mode;
+  STATE._realSelectedChildId = STATE.selectedChildId;
+  detachListeners();            // 停掉雲端即時監聽,避免干擾沙盒
+
+  STATE.mode = "LOCAL";         // 切到本機沙盒
+  STATE.simChildMode = true;
+
+  // 建立 / 載入本機模擬孩子帳號
+  let simUser = lsGet("stb.simUser", null);
+  if (!simUser){
+    simUser = {
+      uid: SIM_CHILD_UID,
+      displayName: "模擬小勇者",
+      email: "sim@debug.local",
+      role: "child",
+      linkedChildIds: [],
+      createdAt: Date.now(),
+    };
+    lsSet("stb.simUser", simUser);
+    const users = lsGet(LS_KEYS.users, {});
+    users[simUser.uid] = simUser;
+    lsSet(LS_KEYS.users, users);
+  }
+  STATE.user = simUser;
+
+  // 建立模擬孩子檔案(完整起手包,跟真實孩子一樣)
+  const exist = await dbGetChildProfile(SIM_CHILD_UID);
+  if (!exist) await dbSetChildProfile(SIM_CHILD_UID, defaultChildProfile(simUser));
+
+  // 走孩子端正常流程(會載入資料 + seed 範例任務 + render)
+  await enterRoleScreen();
+
+  const exitBtn = document.getElementById("btnExitSim");
+  if (exitBtn) exitBtn.style.display = "";
+  const resetBtn = document.getElementById("btnResetSim");
+  if (resetBtn) resetBtn.style.display = "";
+  try { Sound.play("levelup"); } catch {}
+  toast("已進入模擬孩子沙盒(Debug)。這裡的操作不影響真實孩子資料。", "success");
+}
+
+async function exitSimChild(){
+  STATE.simChildMode = false;
+  STATE.mode = STATE._realMode || "CLOUD";
+  STATE.user = STATE._realUser;
+  STATE.selectedChildId = STATE._realSelectedChildId;
+  detachListeners();
+
+  const exitBtn = document.getElementById("btnExitSim");
+  if (exitBtn) exitBtn.style.display = "none";
+  const resetBtn = document.getElementById("btnResetSim");
+  if (resetBtn) resetBtn.style.display = "none";
+
+  // 回到管理者(家長)端,重建雲端監聽
+  await enterRoleScreen();
+  toast("已返回管理者視角", "success");
+}
+
+/* 重置模擬孩子(清空沙盒重新開始,方便反覆測試) */
+async function resetSimChild(){
+  const ok = await vConfirm({
+    color:"danger",
+    title:"重置模擬孩子",
+    body:"確定要把模擬孩子沙盒<b>清空重來</b>嗎?(等級、裝備、寵物全部歸零,僅影響 Debug 沙盒,不影響真實孩子)",
+    yes:"確定重置", no:"取消"
+  });
+  if (!ok) return;
+  // 清掉沙盒 profile,重建
+  const all = lsGet(LS_KEYS.childProfiles, {});
+  delete all[SIM_CHILD_UID];
+  lsSet(LS_KEYS.childProfiles, all);
+  // 清掉沙盒任務/紀錄
+  lsSet(LS_KEYS.tasks, lsGet(LS_KEYS.tasks, []).filter(t => t.childId !== SIM_CHILD_UID));
+  lsSet(LS_KEYS.logs,  lsGet(LS_KEYS.logs, []).filter(l => l.childId !== SIM_CHILD_UID));
+  const simUser = lsGet("stb.simUser", null) || { uid:SIM_CHILD_UID, displayName:"模擬小勇者", role:"child" };
+  await dbSetChildProfile(SIM_CHILD_UID, defaultChildProfile(simUser));
+  await loadAllForChild(SIM_CHILD_UID);
+  renderAll();
+  toast("模擬孩子已重置", "success");
+}
+
+document.getElementById("btnSimChild")?.addEventListener("click", enterSimChild);
+document.getElementById("btnExitSim")?.addEventListener("click", exitSimChild);
+document.getElementById("btnResetSim")?.addEventListener("click", resetSimChild);
+
 (function bootstrap(){
   if (STATE.mode === "LOCAL"){
     const u = lsGet(LS_KEYS.user, null);
