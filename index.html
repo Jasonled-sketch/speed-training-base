@@ -5837,8 +5837,8 @@ function renderGear(){
     }
     cell.addEventListener("click", ()=>{
       if (item){
-        // 已有裝備 → 卸下
-        unequipItem(slot);
+        // 已裝備 → 點擊看詳情(含卸下按鈕)
+        showGearDetail(item, "equipped", slot);
       } else {
         // 空格 → 切換篩選背包
         GEAR_FILTER = (GEAR_FILTER === slot ? null : slot);
@@ -5882,7 +5882,7 @@ function renderGear(){
     const cell = document.createElement("div");
     cell.className = "inv-cell rarity-"+item.rarity;
     cell.innerHTML = `<div class="icon">${SLOT_ICON[item.slot](RARITY_COLOR[item.rarity])}</div><div class="rar-bar"></div>`;
-    cell.addEventListener("click", ()=> equipItem(item.id));
+    cell.addEventListener("click", ()=> showGearDetail(item, "bag"));
     attachEquipTip(cell, item);
     bag.appendChild(cell);
   });
@@ -5928,6 +5928,42 @@ document.addEventListener("click", (e)=>{ if (!e.target.closest(".equip-cell, .i
 window.addEventListener("scroll", hideEquipTip, true);
 document.addEventListener("visibilitychange", hideEquipTip);
 window.addEventListener("blur", hideEquipTip);
+/* v5.4 裝備詳情卡(點擊顯示,手機友善,取代 hover tooltip) */
+async function showGearDetail(item, where, slot){
+  const lines = [];
+  Object.entries(item.stats||{}).forEach(([k,v])=>{
+    if (v) lines.push(`<div class="stat-line" style="display:flex;justify-content:space-between"><span>${STAT_LABEL[k]||k.toUpperCase()}</span><b style="color:var(--text)">+${v}</b></div>`);
+  });
+  let setInfo = "";
+  if (item.setId && typeof EQUIPMENT_SETS !== "undefined" && EQUIPMENT_SETS[item.setId]){
+    const s = EQUIPMENT_SETS[item.setId];
+    setInfo = `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);color:${s.color};font-weight:700">★ ${s.name} 套裝</div>`;
+  }
+  const eh = item.enhance ? ` <span style="color:#fbbf24">+${item.enhance}</span>` : "";
+  const isEquipped = (where === "equipped");
+  const rc = RARITY_COLOR[item.rarity];
+  const ok = await vConfirm({
+    color: "info",
+    title: `${RARITY_NAME[item.rarity]}・${SLOT_NAME[item.slot]}`,
+    body: `
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:10px">
+        <div style="width:68px;height:68px;border-radius:12px;border:2px solid ${rc};background:#0b1220;display:grid;place-items:center;box-shadow:0 0 14px ${rc}">${SLOT_ICON[item.slot](rc)}</div>
+        <div>
+          <div style="color:${rc};font-weight:800;font-size:15px">${item.name}${eh}</div>
+          <div class="small muted">${RARITY_NAME[item.rarity]}｜${SLOT_NAME[item.slot]}</div>
+        </div>
+      </div>
+      <div style="line-height:1.8">${lines.join("") || '<span class="small muted">無屬性加成</span>'}</div>
+      ${setInfo}
+    `,
+    yes: isEquipped ? "卸下裝備" : "裝備上身",
+    no: "關閉",
+  });
+  if (!ok) return;
+  if (isEquipped) await unequipItem(slot);
+  else await equipItem(item.id);
+}
+
 async function equipItem(id){
   const p = STATE.childProfile;
   const it = p.inventory.find(x => x.id === id); if (!it) return;
