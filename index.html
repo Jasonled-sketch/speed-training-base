@@ -1807,7 +1807,16 @@
     .adv-entry:active{ transform:scale(.96); }
     .adv-entry .av-ic{ font-size:28px; line-height:1; }
 
-    /* 角色頁 hero 兩欄(立繪左、狀態右);手機也維持兩欄(立繪縮小) */
+    /* 版本號(右上角,用來判斷是否快取舊版) */
+    .hero-panel{ position:relative; }
+    .ver-tag{
+      position:absolute; top:8px; right:10px; z-index:3;
+      font-family:var(--mono); font-size:10px; font-weight:700; color:var(--text-mute);
+      background:rgba(0,0,0,.35); padding:2px 7px; border-radius:999px; border:1px solid var(--border);
+    }
+    .compact-bars.full{ max-width:none; margin-top:12px; }
+
+    /* 角色頁 hero 兩欄(立繪左、名稱貨幣右);手機也維持兩欄(立繪縮小) */
     .hero-grid-v36{ grid-template-columns: 200px 1fr !important; align-items:start; }
     @media (max-width:600px){
       .hero-grid-v36{ grid-template-columns: 110px 1fr !important; gap:10px; }
@@ -1960,9 +1969,9 @@
 
     <!-- RPG 主面板 v3.6：封號 + 立繪 + LV 同框 -->
     <div class="hero-panel">
+      <span class="ver-tag" id="appVer">v?</span>
+      <!-- 上半:立繪(左) + 名稱貨幣(右),兩欄並排 -->
       <div class="hero-grid-v36">
-
-        <!-- 左：角色卡（單一圖框：封號 ▸ 立繪 ▸ 等級） -->
         <div class="hero-card">
           <div class="hero-card-banner">
             <span class="tier-chip tier-1" id="cTierChip">沉睡王牌</span>
@@ -1974,10 +1983,8 @@
           <div class="hero-level-badge">LV <b id="cLevel">1</b></div>
         </div>
 
-        <!-- 中：名稱 + 貨幣 + 血條 + 屬性 + 出戰 -->
         <div class="hero-info-col">
           <h2 id="cHeroName">勇者學徒</h2>
-
           <div class="currency-row">
             <span class="currency-chip coin">
               <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#fbbf24" stroke="#92400e" stroke-width="1.5"/><circle cx="12" cy="12" r="6" fill="none" stroke="#92400e" stroke-width="1"/><text x="12" y="16" text-anchor="middle" font-size="9" font-weight="900" fill="#92400e">G</text></svg>
@@ -1992,26 +1999,27 @@
               連勝 <b id="cStreakVal">0</b>
             </span>
           </div>
-
-          <div class="compact-bars">
-            <div class="hp-row"><span class="lab">體力</span><div class="hp-bar hp"><span id="cHpBar" style="width:100%"></span></div><span id="cHpTxt">100/100</span></div>
-            <div class="hp-row"><span class="lab">精神</span><div class="hp-bar mp"><span id="cMpBar" style="width:100%"></span></div><span id="cMpTxt">30/30</span></div>
-            <div class="hp-row"><span class="lab">經驗</span><div class="hp-bar exp"><span id="cExpBar" style="width:0%"></span></div><span id="cExpDelta">0/100</span></div>
-          </div>
-
-          <div class="row" style="gap:6px;flex-wrap:wrap">
-            <span class="stat-pill">力量 <b id="cStatATK">10</b></span>
-            <span class="stat-pill">防禦 <b id="cStatDEF">5</b></span>
-            <span class="stat-pill">速度 <b id="cStatSPD">10</b></span>
-            <span class="stat-pill">幸運 <b id="cStatLUCK">5</b></span>
-            <span class="stat-pill" style="border-color:rgba(245,158,11,.4);color:#fde68a">榮譽 <b id="cHonor">80</b></span>
-            <span class="stat-pill" id="cHonorMode" style="color:var(--cyan)">標準模式</span>
-          </div>
         </div>
-
       </div>
 
-      <!-- 出戰寵物/坐騎(在人物下方,全寬) -->
+      <!-- 下半全寬:三條血條 -->
+      <div class="compact-bars full">
+        <div class="hp-row"><span class="lab">體力</span><div class="hp-bar hp"><span id="cHpBar" style="width:100%"></span></div><span id="cHpTxt">100/100</span></div>
+        <div class="hp-row"><span class="lab">精神</span><div class="hp-bar mp"><span id="cMpBar" style="width:100%"></span></div><span id="cMpTxt">30/30</span></div>
+        <div class="hp-row"><span class="lab">經驗</span><div class="hp-bar exp"><span id="cExpBar" style="width:0%"></span></div><span id="cExpDelta">0/100</span></div>
+      </div>
+
+      <!-- 再下方全寬:屬性 -->
+      <div class="row stat-row" style="gap:6px;flex-wrap:wrap;margin-top:10px">
+        <span class="stat-pill">力量 <b id="cStatATK">10</b></span>
+        <span class="stat-pill">防禦 <b id="cStatDEF">5</b></span>
+        <span class="stat-pill">速度 <b id="cStatSPD">10</b></span>
+        <span class="stat-pill">幸運 <b id="cStatLUCK">5</b></span>
+        <span class="stat-pill" style="border-color:rgba(245,158,11,.4);color:#fde68a">榮譽 <b id="cHonor">80</b></span>
+        <span class="stat-pill" id="cHonorMode" style="color:var(--cyan)">標準模式</span>
+      </div>
+
+      <!-- 出戰寵物/坐騎(全寬) -->
       <div class="squad-row" id="squadRow">
         <div class="squad-slot empty" id="squadPet">
           <div class="squad-mini">—</div>
@@ -3318,20 +3326,24 @@ async function enterRoleScreen(){
 
 /* 家長綁定關係 */
 async function loadParentLinks(){
+  // 去重 + 過濾模擬孩子/自己/空值
+  const clean = (ids)=> [...new Set(ids||[])].filter(id => id && id !== "__sim_child__" && id !== STATE.user.uid);
   if (STATE.mode === "LOCAL"){
     const links = lsGet(LS_KEYS.links, {});
-    const childIds = links[STATE.user.uid] || [];
+    const childIds = clean(links[STATE.user.uid]);
     const users = lsGet(LS_KEYS.users, {});
-    STATE.parentLinkedChildren = childIds.map(cid => users[cid]).filter(Boolean);
+    STATE.parentLinkedChildren = childIds.map(cid => users[cid]).filter(u => u && u.role === "child");
     return;
   }
   // CLOUD：從 users/{parent}.linkedChildIds 取
   const me = await dbGetUser(STATE.user.uid);
-  const ids = me?.linkedChildIds || [];
+  const ids = clean(me?.linkedChildIds);
   STATE.parentLinkedChildren = [];
+  const seen = new Set();
   for (const cid of ids){
+    if (seen.has(cid)) continue; seen.add(cid);
     const u = await dbGetUser(cid);
-    if (u) STATE.parentLinkedChildren.push(u);
+    if (u && u.role === "child") STATE.parentLinkedChildren.push(u);  // 只收真正的孩子帳號
   }
 }
 
@@ -10937,6 +10949,13 @@ enterRoleScreen = async function(){
     try { childNavTo("task"); } catch {}
   }
 };
+
+/* v5.8 版本號(改版時 bump,顯示在人物頁右上角,用來判斷是否載到舊快取) */
+const APP_VERSION = "5.8";
+(function showVer(){
+  const el = document.getElementById("appVer");
+  if (el) el.textContent = "v" + APP_VERSION;
+})();
 
 (function bootstrap(){
   if (STATE.mode === "LOCAL"){
