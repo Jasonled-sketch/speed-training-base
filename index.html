@@ -6,6 +6,10 @@
   <title>極速特訓基地｜少年自律養成任務系統</title>
   <meta name="description" content="極速特訓基地：以遊戲化任務系統養成孩子的自律、家庭貢獻、學業與榮譽。" />
   <meta name="theme-color" content="#111827" />
+  <!-- v5.7 防止瀏覽器快取舊版 HTML -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <!-- PWA manifest：正式部署時請拆出獨立 manifest.json -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="assets/icon-192.png" type="image/png" />
@@ -1803,11 +1807,14 @@
     .adv-entry:active{ transform:scale(.96); }
     .adv-entry .av-ic{ font-size:28px; line-height:1; }
 
-    /* 角色頁 hero 改兩欄(立繪左、狀態右);手機單欄 */
-    .hero-grid-v36{ grid-template-columns: 200px 1fr !important; }
+    /* 角色頁 hero 兩欄(立繪左、狀態右);手機也維持兩欄(立繪縮小) */
+    .hero-grid-v36{ grid-template-columns: 200px 1fr !important; align-items:start; }
     @media (max-width:600px){
-      .hero-grid-v36{ grid-template-columns: 1fr !important; }
-      .hero-card{ margin:0 auto; }
+      .hero-grid-v36{ grid-template-columns: 110px 1fr !important; gap:10px; }
+      .hero-card{ width:auto !important; padding:8px 6px !important; }
+      .hero-card .hero-portrait{ width:96px !important; height:120px !important; }
+      .hero-card-banner .tier-chip{ font-size:10px; padding:3px 8px; }
+      .hero-card .hero-level-badge{ font-size:12px; padding:4px 12px; }
     }
 
     /* ============================================================
@@ -4301,31 +4308,14 @@ async function triggerInstall(){
   $("#installBannerParent").classList.remove("show");
 }
 
-// Service Worker：原型階段註冊內嵌的最簡 SW（透過 blob URL）
-// 正式部署時請改為：navigator.serviceWorker.register('/service-worker.js')
+// v5.7 開發/頻繁更新階段:主動清除舊 Service Worker 與所有快取,
+// 確保每次都載入最新版(之前 cache-first 的 SW 會害你一直看到舊版)。
+// 等版面穩定、要做 PWA 離線時,再改註冊 ./service-worker.js 並用 network-first 策略。
 if ("serviceWorker" in navigator){
-  const swCode = `
-    const CACHE = "stb-cache-v1";
-    self.addEventListener("install", e => { self.skipWaiting(); });
-    self.addEventListener("activate", e => { self.clients.claim(); });
-    self.addEventListener("fetch", (event)=>{
-      const req = event.request;
-      if (req.method !== "GET") return;
-      event.respondWith(
-        caches.open(CACHE).then(async cache => {
-          const cached = await cache.match(req);
-          const fetchPromise = fetch(req).then(res => {
-            try { cache.put(req, res.clone()); } catch(e){}
-            return res;
-          }).catch(()=> cached);
-          return cached || fetchPromise;
-        })
-      );
-    });
-  `;
-  const swBlob = new Blob([swCode], { type: "text/javascript" });
-  const swUrl  = URL.createObjectURL(swBlob);
-  navigator.serviceWorker.register(swUrl).catch(()=>{/* 原型可忽略 */});
+  navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+}
+if (window.caches){
+  caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(()=>{});
 }
 
 /* ===========================================================
@@ -6606,6 +6596,8 @@ function closeBattleResult(){
   $("#battleScreen").classList.remove("open");
   wrap.classList.remove("open","win","lose");
   wrap.innerHTML = "";
+  // v5.7:真正離開副本(關閉結算)才恢復一般 BGM
+  try { Sound.stopBattleBgm(); } catch {}
 }
 
 $("#btnFleeBattle").addEventListener("click", ()=>{
@@ -7888,14 +7880,8 @@ const Sound = {
       case "wrong":   tone(220, .25,"square",.07); setTimeout(()=>tone(180,.25,"square",.07),120); break;
       case "victory": arpeggio([523, 659, 784, 988, 1175], .08, "triangle", .08); break;
       case "lose":    arpeggio([392, 330, 262, 220], .12, "sawtooth", .07); break;
-      case "levelup": // 尊榮升級號角:長上行琶音 + 高音和聲層
-        arpeggio([392,523,659,784,1046,1318,1568,2093], .075, "triangle", .10);
-        arpeggio([523,659,784,1046], .15, "sine", .05);
-        break;
-      case "chest":   // 開箱:明亮上行 + 高音鈴聲
-        arpeggio([659,784,988,1318], .06, "triangle", .09);
-        arpeggio([1318,1568,2093], .12, "sine", .045);
-        break;
+      case "levelup": this.playFanfare("levelup"); break;  // 尊榮號角
+      case "chest":   this.playFanfare("chest");   break;  // 開箱綻放
       case "broken":  tone(120,.4,"sawtooth",.1); setTimeout(()=>tone(80,.5,"sawtooth",.1),100); break;
       case "forge":   tone(330,.06,"square",.06); setTimeout(()=>tone(440,.06,"square",.06),60); break;
       case "evolve":  arpeggio([392, 494, 587, 698, 880], .08, "sine", .09); break;
@@ -8036,6 +8022,47 @@ const Sound = {
       this.battleGain = null;
     }
     if (this.bgmOn) setTimeout(()=> this.startBgm(), 280);  // 恢復一般 BGM
+  },
+
+  /* v5.7 尊榮號角:多音大三和弦疊加 + 銅管音色 + 殘響,做出榮耀感 */
+  playFanfare(kind){
+    if (!this.sfxOn) return;
+    const ctx = this.ensure(); if (!ctx) return;
+    const t0 = ctx.currentTime;
+    const master = ctx.createGain(); master.gain.value = .5; master.connect(ctx.destination);
+    // 簡易殘響(回授延遲),營造大廳莊嚴感
+    const delay = ctx.createDelay(); delay.delayTime.value = .13;
+    const fb = ctx.createGain(); fb.gain.value = .3;
+    delay.connect(fb); fb.connect(delay); delay.connect(master);
+    const note = (freq, start, dur, peak, type="sawtooth")=>{
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq;
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2900;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(peak, start + dur*0.12);
+      g.gain.linearRampToValueAtTime(peak*0.7, start + dur*0.55);
+      g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      o.connect(lp); lp.connect(g); g.connect(master); g.connect(delay);
+      o.start(start); o.stop(start + dur + 0.05);
+    };
+    if (kind === "levelup"){
+      // 前導上行三連音 → 主和弦(C 大三 + 八度)綻放 + 高音鈴
+      note(392, t0,      .18, .26);
+      note(523, t0+.12,  .18, .28);
+      note(659, t0+.24, 1.15, .30);                 // 主音 E
+      note(523, t0+.30, 1.15, .20);                 // C
+      note(784, t0+.30, 1.15, .20);                 // G
+      note(1046,t0+.30, 1.15, .16);                 // 高八度 C
+      note(1318,t0+.42,  .95, .12, "triangle");     // E 鈴
+      note(1568,t0+.50,  .85, .08, "triangle");     // G 鈴
+    } else { // chest
+      note(659, t0,      .12, .22, "triangle");
+      note(880, t0+.08,  .12, .24, "triangle");
+      note(1175,t0+.16,  .95, .26, "triangle");     // 主綻放
+      note(784, t0+.20,  .95, .16);
+      note(1568,t0+.26,  .75, .12, "sine");
+      note(2349,t0+.32,  .55, .07, "sine");         // 高泛音閃爍
+    }
   },
 
   toggleBgm(){ this.bgmOn = !this.bgmOn; lsSet("stb.bgmOn", this.bgmOn); if (this.bgmOn) this.startBgm(); else { this.stopBgm(); this.stopBattleBgm(); } updateSoundUi(); },
@@ -10864,7 +10891,7 @@ document.getElementById("btnShopHelp")?.addEventListener("click", ()=>{
 const _v55_endBattle = (typeof endBattle === "function") ? endBattle : null;
 if (_v55_endBattle){
   endBattle = async function(win){
-    try { Sound.stopBattleBgm(); } catch {}
+    // 不在這裡停戰鬥音樂(寶箱結算還在副本內);改由 closeBattleResult 關閉時才恢復
     await _v55_endBattle(win);
     if (win){ try { await gainCreatureExp(35); } catch {} }
   };
