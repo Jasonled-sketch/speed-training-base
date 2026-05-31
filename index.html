@@ -1727,6 +1727,18 @@
       <div class="login-title">極速特訓基地</div>
       <div class="login-sub">少年自律養成任務系統｜KPI × 任務 × 獎勵時間</div>
 
+      <!-- WebView(App 內建瀏覽器)警告:Google 登入會被 403 disallowed_useragent 擋下 -->
+      <div id="webviewWarn" style="display:none;text-align:left;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.5);border-radius:12px;padding:14px;margin-bottom:14px;line-height:1.7">
+        <div style="font-weight:800;color:#fca5a5;font-size:15px;margin-bottom:6px">⚠️ 請改用瀏覽器開啟</div>
+        <div style="font-size:13px;color:#fecaca">
+          你目前是從 <b>App 內建瀏覽器</b>(例如 LINE / FB / IG)開啟，
+          Google 規定這種方式<b>不能登入</b>。請改用 <b>Chrome 或 Safari</b>：
+          <br/>① 點下方按鈕複製網址 → ② 開啟 Chrome / Safari → ③ 貼到網址列前往
+          <br/><span style="color:#fca5a5">或：本頁右上角「⋮」→「用其他瀏覽器開啟」</span>
+        </div>
+        <button id="btnCopyUrl" class="btn cyan sm" style="margin-top:10px;width:100%">📋 複製網址</button>
+      </div>
+
       <button id="btnGoogleLogin" class="gsi-btn">
         <svg class="gsi-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.1 29.4 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.4 1 7.4 2.8l5.7-5.7C33.6 6.6 29 4.7 24 4.7 13.4 4.7 4.7 13.4 4.7 24S13.4 43.3 24 43.3 43.3 34.6 43.3 24c0-1.2-.1-2.3-.3-3.5z"/>
@@ -2937,6 +2949,47 @@ $("#btnGoogleLogin").addEventListener("click", async ()=>{
   }
 });
 $("#btnGuest").addEventListener("click", loginAsGuest);
+
+/* ===========================================================
+   WebView(App 內建瀏覽器)偵測
+   Google 禁止在 LINE/FB/IG 等 App 內建瀏覽器做 OAuth 登入
+   (403 disallowed_useragent),偵測到就引導改用系統瀏覽器
+   =========================================================== */
+(function detectWebView(){
+  const ua = navigator.userAgent || "";
+  const isWebView =
+    /\bLine\//i.test(ua) ||
+    /FBAN|FBAV|FB_IAB/i.test(ua) ||
+    /Instagram/i.test(ua) ||
+    /Messenger/i.test(ua) ||
+    /MicroMessenger/i.test(ua) ||                 // WeChat
+    /\bGSA\//i.test(ua) ||                         // Google App in-app
+    (/Android/i.test(ua) && /;\s*wv[\)\s]/i.test(ua)); // Android System WebView
+
+  // CLOUD 模式隱藏「訪客模式」按鈕,避免家人誤點導致資料不雲端同步
+  if (STATE.mode === "CLOUD"){
+    const g = document.getElementById("btnGuest");
+    if (g) g.style.display = "none";
+  }
+
+  if (isWebView){
+    const warn = document.getElementById("webviewWarn");
+    const gbtn = document.getElementById("btnGoogleLogin");
+    if (warn) warn.style.display = "block";
+    if (gbtn){ gbtn.disabled = true; gbtn.style.opacity = ".4"; gbtn.style.cursor = "not-allowed"; }
+  }
+})();
+
+/* 複製網址按鈕(WebView 引導用) */
+document.getElementById("btnCopyUrl")?.addEventListener("click", async ()=>{
+  const url = location.origin + location.pathname;
+  try{
+    await navigator.clipboard.writeText(url);
+    toast("已複製網址,請到 Chrome / Safari 貼上開啟", "success");
+  }catch{
+    prompt("請手動複製這個網址,到 Chrome / Safari 開啟:", url);
+  }
+});
 
 function loginAsGuest(){
   // 取得或建立一個本機訪客身分
