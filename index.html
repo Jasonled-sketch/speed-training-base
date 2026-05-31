@@ -1709,6 +1709,15 @@
     .drop-icon{width:64px; height:64px; margin:6px auto; border-radius:12px; border:2px solid var(--rc, var(--border-strong)); display:grid; place-items:center; background:#0b1220}
     .drop-icon svg{width:70%;height:70%}
 
+    /* 拖曳把手 */
+    .quad-task .row-1{ display:flex; align-items:center; gap:6px; }
+    .drag-grip{
+      flex:0 0 auto; color:var(--text-mute); font-size:16px; line-height:1;
+      cursor:grab; padding:2px 4px; user-select:none; touch-action:none;
+    }
+    .quad-task{ cursor:grab; }
+    .quad-task:active{ cursor:grabbing; }
+
     /* ============================================================
        v5.0 手機智慧效能模式(治卡頓頻閃)
        手機自動關掉「持續性 GPU 重負荷」效果:毛玻璃、旋轉模糊光環、
@@ -7702,67 +7711,68 @@ const Sound = {
     this.bgmGain.gain.value = .30;
     this.bgmGain.connect(ctx.destination);
 
-    // v5.2 卡農 in D — 合成弦樂版(鋸齒波 + 低通柔化 + 顫音 + 慢起弓),節奏中速
+    // v5.3 韋瓦第《四季-春》第一樂章主題(公共領域)— 合成弦樂,E 大調,輕快歡愉
     const F = {
-      D2:73.42, A1:55.00, B1:61.74, Fs1:46.25, G1:49.00,
-      Fs3:185.00, A3:220.00, B3:246.94, Cs4:277.18, D4:293.66, E4:329.63, Fs4:369.99, G4:392.00,
-      A4:440.00, B4:493.88, Cs5:554.37, D5:587.33, E5:659.25, Fs5:739.99,
+      E2:82.41, B2:123.47,                                  // 低音
+      E5:659.25, Fs5:739.99, Gs5:830.61, A5:880.00,
+      B5:987.77, Cs6:1108.73, E6:1318.51,                   // 主旋律
     };
 
-    // 合成弦樂單音:鋸齒波(泛音豐富像弦)→ 低通濾波(柔化)→ 顫音 → 慢起弓 ADSR
+    // 合成弦樂單音:鋸齒波 → 低通柔化 → 顫音 → 慢起弓 ADSR
     const string = (freq, t, dur, peak)=>{
       const o = ctx.createOscillator();
-      o.type = "sawtooth";
-      o.frequency.value = freq;
-      // 顫音(vibrato):弦樂的靈魂
+      o.type = "sawtooth"; o.frequency.value = freq;
       const vib = ctx.createOscillator();
-      vib.type = "sine"; vib.frequency.value = 5.2;
-      const vibAmt = ctx.createGain();
-      vibAmt.gain.value = freq * 0.005;
+      vib.type = "sine"; vib.frequency.value = 5.4;
+      const vibAmt = ctx.createGain(); vibAmt.gain.value = freq * 0.005;
       vib.connect(vibAmt); vibAmt.connect(o.frequency);
-      // 低通濾波:去掉鋸齒的刺耳高頻,變得溫潤
       const lp = ctx.createBiquadFilter();
-      lp.type = "lowpass"; lp.frequency.value = 2000; lp.Q.value = 0.7;
-      // 慢起弓 ADSR
+      lp.type = "lowpass"; lp.frequency.value = 2400; lp.Q.value = 0.7;
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(peak, t + dur*0.28);     // 慢漸強(像拉弓)
-      g.gain.linearRampToValueAtTime(peak*0.82, t + dur*0.72);
-      g.gain.exponentialRampToValueAtTime(0.001, t + dur);    // 緩收
+      g.gain.linearRampToValueAtTime(peak, t + dur*0.22);
+      g.gain.linearRampToValueAtTime(peak*0.8, t + dur*0.7);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
       o.connect(lp); lp.connect(g); g.connect(this.bgmGain);
       o.start(t); o.stop(t + dur + 0.05);
       vib.start(t); vib.stop(t + dur + 0.05);
     };
 
-    // 卡農進行:D-A-Bm-F#m-G-D-G-A。每和弦:大提琴根音 + 弦樂和聲 pad + 小提琴主旋律(兩個音)
-    const prog = [
-      { bass:"D2",  pad:["A3","D4","Fs4"],   mel:["Fs5","E5"]  },
-      { bass:"A1",  pad:["A3","Cs4","E4"],   mel:["D5","Cs5"]  },
-      { bass:"B1",  pad:["Fs3","B3","D4"],   mel:["B4","A4"]   },
-      { bass:"Fs1", pad:["Fs3","A3","Cs4"],  mel:["B4","Cs5"]  },
-      { bass:"G1",  pad:["B3","D4","G4"],    mel:["D5","Cs5"]  },
-      { bass:"D2",  pad:["A3","D4","Fs4"],   mel:["B4","A4"]   },
-      { bass:"G1",  pad:["B3","D4","G4"],    mel:["G4","Fs4"]  },
-      { bass:"A1",  pad:["A3","Cs4","E4"],   mel:["G4","E4"]   },
+    const R = "R";
+    // 四季春著名主題:[音名, 拍長]
+    const mel = [
+      // 「春天來了」主題 A
+      ["E5",1],["E5",.5],["E5",.5], ["E5",1],["E5",.5],["E5",.5], ["E5",1],["Gs5",1],["B5",1],["A5",.5],["Gs5",.5],[R,1],
+      // 回聲(同句重現)
+      ["E5",1],["E5",.5],["E5",.5], ["E5",1],["E5",.5],["E5",.5], ["E5",1],["Gs5",1],["B5",1],["A5",.5],["Gs5",.5],[R,1],
+      // 鳥鳴樂句(上行)
+      ["Fs5",1],["Fs5",.5],["Fs5",.5], ["Fs5",1],["Fs5",.5],["Fs5",.5], ["Fs5",1],["A5",1],["Cs6",1],["B5",.5],["A5",.5],[R,1],
+      // 華彩收尾(下行回主音)
+      ["Gs5",.5],["B5",.5],["E6",1], ["Cs6",.5],["B5",.5],["A5",1], ["Gs5",1],["Fs5",1],["E5",2],[R,1],
     ];
-    const beat = 1.45;   // 節奏中速(弦樂悠揚)
-    let ci = 0;
+    const unit = 0.36;  // 一拍秒數(活潑中速)
 
-    const tick = ()=>{
+    const scheduleNext = ()=>{
       if (!this.bgmGain) return;
-      const t = ctx.currentTime;
-      const ch = prog[ci % prog.length];
-      string(F[ch.bass], t, beat*1.0, .26);                    // 大提琴低音
-      ch.pad.forEach(n => string(F[n], t, beat*0.95, .10));    // 弦樂和聲 pad
-      string(F[ch.mel[0]], t,            beat*0.52, .30);      // 小提琴旋律 上
-      string(F[ch.mel[1]], t + beat*0.5, beat*0.50, .30);      // 小提琴旋律 下
-      ci++;
+      const start = ctx.currentTime + 0.06;
+      let t = start, total = 0;
+      mel.forEach(([n, beats])=>{
+        const dur = beats * unit;
+        if (n !== R) string(F[n], t, Math.max(dur*0.92, 0.12), .30);
+        t += dur; total += dur;
+      });
+      // 低音和聲床:主音 E → 屬音 B → 回主音(撐住和聲,不搶旋律)
+      const seg = total / 4;
+      string(F.E2, start,           seg*2*0.98, .20);
+      string(F.B2, start + seg*2,   seg*0.98,   .18);
+      string(F.E2, start + seg*3,   seg*0.98,   .20);
+      // 整句播完再排下一輪(支援變拍長)
+      this._bgmTimer = setTimeout(scheduleNext, total*1000 - 60);
     };
-    tick();
-    this._bgmTimer = setInterval(tick, beat * 1000);
+    scheduleNext();
   },
   stopBgm(){
-    if (this._bgmTimer){ clearInterval(this._bgmTimer); this._bgmTimer = null; }
+    if (this._bgmTimer){ clearTimeout(this._bgmTimer); clearInterval(this._bgmTimer); this._bgmTimer = null; }
     if (this.bgmGain){
       try { this.bgmGain.gain.exponentialRampToValueAtTime(.001, this.ctx.currentTime+.3); } catch{}
       this.bgmGain = null;
@@ -8510,11 +8520,11 @@ renderHero = function(){
 renderQuadTask = function(t){
   const el = document.createElement("div");
   el.className = "quad-task" + (t.pendingPriorityMove ? " pending" : "");
-  el.draggable = true;
   el.dataset.id = t.taskId;
+  el.style.touchAction = "none";   // 讓觸控拖曳不被瀏覽器捲動搶走
   el.innerHTML = `
     <div class="row-1">
-      ${t.pendingPriorityMove ? `<span class="pending-tag">待核准</span>` : ""}
+      <span class="drag-grip" title="拖曳調整優先級">⠿</span>
       <div class="title-line">${escapeHtml(t.title)}</div>
       <div class="actions">
         <button class="btn sm" data-act="start">開始</button>
@@ -8533,49 +8543,97 @@ renderQuadTask = function(t){
     ev.stopPropagation();
     onChildTaskAction(t, b.dataset.act);
   }));
-  el.addEventListener("dragstart", e => {
-    el.classList.add("dragging");
-    e.dataTransfer.setData("text/plain", t.taskId);
-    e.dataTransfer.effectAllowed = "move";
-  });
-  el.addEventListener("dragend", () => el.classList.remove("dragging"));
   return el;
 };
 
-/* ---- 防止 drop 重複觸發（雙重 toast 修正） ---- */
+/* ---- 套用象限移動(共用,含防重複鎖) ---- */
 let _dropLock = false;
-const _v36_bindQuadDnD = bindQuadDnD;
+async function applyQuadMove(taskId, newQ){
+  if (_dropLock) return;
+  _dropLock = true;
+  try {
+    const p = STATE.childProfile;
+    const t = STATE.tasks.find(x => x.taskId === taskId); if (!t) return;
+    if ((t.priority||"q2") === newQ) return;
+    await dbUpdateTask(taskId, { priority: newQ, pendingPriorityMove: null });
+    Sound.play("pop");
+    toast(`已移至 ${({q1:"紅",q2:"黃",q3:"藍",q4:"綠"})[newQ]} 象限`, "success");
+    await dbAddLogSafe({
+      actorId: STATE.user.uid, actorRole:"child", action:"task_pri_self",
+      message:`孩子自行將「${t.title}」移至 ${({q1:"紅",q2:"黃",q3:"藍",q4:"綠"})[newQ]} 象限`,
+      childId: p.childId,
+    });
+    if (STATE.mode === "LOCAL") await loadAllForChild(p.childId);
+    renderAll();
+  } finally {
+    setTimeout(()=> _dropLock = false, 400);
+  }
+}
+
+/* ---- v5.3 Pointer Events 拖曳(手機觸控 + 桌機滑鼠通用) ---- */
 bindQuadDnD = function(){
-  $$(".quad-cell").forEach(cell => {
-    cell.ondragover = e => { e.preventDefault(); cell.classList.add("dragover"); };
-    cell.ondragleave = () => cell.classList.remove("dragover");
-    cell.ondrop = async e => {
-      e.preventDefault(); cell.classList.remove("dragover");
-      if (_dropLock) return;
-      _dropLock = true;
-      try {
-        const taskId = e.dataTransfer.getData("text/plain");
-        const newQ = cell.dataset.quad;
-        const p = STATE.childProfile;
-        const t = STATE.tasks.find(x => x.taskId === taskId); if (!t) return;
-        // 同象限拖回不處理
-        if ((t.priority||"q2") === newQ && !t.pendingPriorityMove) return;
-        // v5.2:開放孩子自由拖曳調整優先級(不需家長核准),培養自主規劃能力
-        await dbUpdateTask(taskId, { priority: newQ, pendingPriorityMove: null });
-        Sound.play("pop");
-        toast(`已移至 ${({q1:"紅",q2:"黃",q3:"藍",q4:"綠"})[newQ]} 象限`, "success");
-        await dbAddLogSafe({
-          actorId: STATE.user.uid, actorRole:"child",
-          action:"task_pri_self",
-          message:`孩子自行將「${t.title}」移至 ${({q1:"紅",q2:"黃",q3:"藍",q4:"綠"})[newQ]} 象限`,
-          childId: p.childId,
-        });
-        if (STATE.mode === "LOCAL") await loadAllForChild(p.childId);
-        renderAll();
-      } finally {
-        setTimeout(()=> _dropLock = false, 600);
-      }
+  const cells = Array.from(document.querySelectorAll(".quad-cell"));
+  document.querySelectorAll(".quad-task").forEach(card => {
+    const taskId = card.dataset.id;
+    let pressTimer = null, ghost = null, active = false, lastCell = null, sx = 0, sy = 0;
+
+    const moveGhost = (x, y)=>{
+      if (!ghost) return;
+      ghost.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) scale(1.03)`;
+      ghost.style.display = "none";
+      const under = document.elementFromPoint(x, y);
+      ghost.style.display = "";
+      const cell = under?.closest?.(".quad-cell");
+      cells.forEach(c => c.classList.toggle("dragover", c === cell));
+      lastCell = cell;
     };
+    const start = (x, y)=>{
+      active = true;
+      const r = card.getBoundingClientRect();
+      ghost = card.cloneNode(true);
+      ghost.style.cssText = `position:fixed;left:0;top:0;width:${r.width}px;z-index:99999;pointer-events:none;opacity:.92;box-shadow:0 12px 30px rgba(0,0,0,.6);border:2px solid var(--cyan);border-radius:10px;background:var(--surface-2)`;
+      document.body.appendChild(ghost);
+      card.style.opacity = ".25";
+      try { Sound.play("soft"); } catch {}
+      moveGhost(x, y);
+    };
+    const cleanup = ()=>{
+      if (pressTimer){ clearTimeout(pressTimer); pressTimer = null; }
+      if (ghost){ ghost.remove(); ghost = null; }
+      cells.forEach(c => c.classList.remove("dragover"));
+      card.style.opacity = "";
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", cleanup);
+    };
+    const onMove = (e)=>{
+      if (!active){
+        // 移動超過 8px 立即啟動(不用等長按)
+        if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 8){
+          clearTimeout(pressTimer);
+          start(e.clientX, e.clientY);
+        }
+        return;
+      }
+      e.preventDefault();
+      moveGhost(e.clientX, e.clientY);
+    };
+    const onUp = ()=>{
+      const cell = lastCell, wasActive = active;
+      active = false;
+      cleanup();
+      if (wasActive && cell) applyQuadMove(taskId, cell.dataset.quad);
+    };
+
+    card.addEventListener("pointerdown", (e)=>{
+      if (e.target.closest("button")) return;   // 點按鈕不啟動拖曳
+      sx = e.clientX; sy = e.clientY;
+      active = false; lastCell = null;
+      window.addEventListener("pointermove", onMove, { passive:false });
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", cleanup);
+      pressTimer = setTimeout(()=> start(e.clientX, e.clientY), 140);  // 長按 140ms 也啟動
+    });
   });
 };
 
