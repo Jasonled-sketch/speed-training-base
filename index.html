@@ -1718,6 +1718,57 @@
     .quad-task{ cursor:grab; }
     .quad-task:active{ cursor:grabbing; }
 
+    /* ====== v5.4 底部導覽列 + 冒險入口 + 角色頁兩欄 ====== */
+    .bottom-nav{
+      position:fixed; left:0; right:0; bottom:0; z-index:60;
+      display:flex; background:rgba(11,18,32,.98);
+      border-top:1px solid var(--border-strong);
+      padding-bottom:env(safe-area-inset-bottom, 0px);
+      box-shadow:0 -4px 16px rgba(0,0,0,.4);
+    }
+    .bn-item{
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+      background:none; border:none; cursor:pointer; padding:8px 2px 7px;
+      color:var(--text-mute); position:relative; transition:color .15s;
+    }
+    .bn-item .bn-ic{ font-size:21px; line-height:1; }
+    .bn-item .bn-tx{ font-size:11px; letter-spacing:.05em; }
+    .bn-item.active{ color:var(--cyan); }
+    .bn-item.active .bn-ic{ filter:drop-shadow(0 0 6px var(--cyan)); transform:translateY(-1px); }
+    .bn-dot{ position:absolute; top:5px; right:calc(50% - 18px); width:7px; height:7px; border-radius:50%; background:var(--red); animation:pulse 1.4s infinite; }
+    /* 孩子端內容下方留空,不被底部列擋住 */
+    #screen-child .container{ padding-bottom:80px; }
+
+    /* 冒險子頁「返回角色」浮動鈕 */
+    .adv-back{
+      position:fixed; left:12px; bottom:86px; z-index:61;
+      padding:9px 16px; border-radius:999px;
+      background:linear-gradient(135deg,#fbbf24,#b45309); color:#0b1220;
+      border:none; font-weight:800; cursor:pointer;
+      box-shadow:0 6px 18px -4px rgba(0,0,0,.6);
+    }
+
+    /* 冒險入口 grid */
+    .adv-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    @media (max-width:380px){ .adv-grid{ grid-template-columns:repeat(2,1fr); } }
+    .adv-entry{
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      padding:14px 8px; border-radius:14px; cursor:pointer;
+      background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.2)),var(--surface);
+      border:1px solid var(--border-strong); color:var(--text);
+      font-weight:700; font-size:13px; transition:transform .1s, border-color .15s;
+    }
+    .adv-entry:hover{ transform:translateY(-2px); border-color:var(--cyan); }
+    .adv-entry:active{ transform:scale(.96); }
+    .adv-entry .av-ic{ font-size:28px; line-height:1; }
+
+    /* 角色頁 hero 改兩欄(立繪左、狀態右);手機單欄 */
+    .hero-grid-v36{ grid-template-columns: 200px 1fr !important; }
+    @media (max-width:600px){
+      .hero-grid-v36{ grid-template-columns: 1fr !important; }
+      .hero-card{ margin:0 auto; }
+    }
+
     /* ============================================================
        v5.0 手機智慧效能模式(治卡頓頻閃)
        手機自動關掉「持續性 GPU 重負荷」效果:毛玻璃、旋轉模糊光環、
@@ -1918,19 +1969,11 @@
           </div>
         </div>
 
-        <!-- 右欄：AI 戰績分析 -->
-        <div class="hero-analysis-col">
-          <div class="ai-panel">
-            <div class="ai-head"><span class="ai-dot"></span><b>AI 戰績分析</b></div>
-            <div id="cAiAnalysis" class="ai-list"></div>
-          </div>
-        </div>
-
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs" id="childTabs">
+    <!-- Tabs(舊頂部分頁,改用底部導覽後隱藏;保留供 JS 切換邏輯參照) -->
+    <div class="tabs" id="childTabs" style="display:none">
       <button data-tab="missions" class="active">今日任務</button>
       <button data-tab="dungeon">副本闖關</button>
       <button data-tab="gear">裝備 / 背包</button>
@@ -2006,6 +2049,27 @@
         <div class="row" style="margin-top:10px">
           <button id="btnAddInitiativeTask" class="btn cyan">新增任務（主動性 +）</button>
           <div class="small muted">主動新增任務會貢獻到 initiativeScore。</div>
+        </div>
+      </div>
+
+      <!-- 冒險樂園入口(完成任務後的獎勵系統) -->
+      <div class="card" style="margin-top:14px">
+        <h4 class="card-title">冒險樂園 <span class="tag">任務獎勵</span></h4>
+        <div class="adv-grid">
+          <button class="adv-entry" data-adv="dungeon"><span class="av-ic">⚔️</span><span>副本闖關</span></button>
+          <button class="adv-entry" data-adv="gear"><span class="av-ic">🛡️</span><span>裝備背包</span></button>
+          <button class="adv-entry" data-adv="pet"><span class="av-ic">🐾</span><span>寵物</span></button>
+          <button class="adv-entry" data-adv="mount"><span class="av-ic">🐎</span><span>坐騎</span></button>
+          <button class="adv-entry" data-adv="shop"><span class="av-ic">🛒</span><span>商店</span></button>
+          <button class="adv-entry" data-adv="forge"><span class="av-ic">🔨</span><span>研發部</span></button>
+        </div>
+      </div>
+
+      <!-- AI 戰績分析(移到角色頁底部) -->
+      <div class="card" style="margin-top:14px">
+        <div class="ai-panel" style="border:none;padding:0;background:none">
+          <div class="ai-head"><span class="ai-dot"></span><b>AI 戰績分析</b></div>
+          <div id="cAiAnalysis" class="ai-list"></div>
         </div>
       </div>
     </div>
@@ -2303,7 +2367,31 @@
         </div>
       </div>
     </div>
+
+    <!-- 冒險子頁的「返回角色」浮動鈕(只在進入冒險系統時顯示) -->
+    <button id="childAdvBack" class="adv-back" style="display:none">← 返回角色</button>
   </div>
+
+  <!-- 底部固定導覽列(像 App) -->
+  <nav class="bottom-nav" id="childBottomNav">
+    <button class="bn-item active" data-nav="role">
+      <span class="bn-ic">🏠</span><span class="bn-tx">角色</span>
+    </button>
+    <button class="bn-item" data-nav="achievements">
+      <span class="bn-ic">🏆</span><span class="bn-tx">成就</span>
+      <span class="bn-dot" id="bnAchvDot" style="display:none"></span>
+    </button>
+    <button class="bn-item" data-nav="checkin">
+      <span class="bn-ic">📅</span><span class="bn-tx">簽到</span>
+      <span class="bn-dot" id="bnCheckinDot" style="display:none"></span>
+    </button>
+    <button class="bn-item" data-nav="reward">
+      <span class="bn-ic">🎮</span><span class="bn-tx">獎勵</span>
+    </button>
+    <button class="bn-item" data-nav="kpi">
+      <span class="bn-ic">📊</span><span class="bn-tx">KPI</span>
+    </button>
+  </nav>
 </section>
 
 <!-- =========================================================
@@ -10480,6 +10568,63 @@ document.getElementById("btnQuadHelp")?.addEventListener("click", ()=>{
     `,
   });
 });
+
+/* ===========================================================
+   v5.4 孩子端底部導覽列切換(取代頂部 12 分頁)
+   底部 5 主項:角色/成就/簽到/獎勵/KPI
+   「角色」頁含四象限主軸 + 冒險入口(副本/裝備/寵物/坐騎/商店/研發)
+   =========================================================== */
+function childNavTo(nav){
+  const advKeys = ["dungeon","gear","pet","mount","shop","forge"];
+  const isAdv = advKeys.includes(nav);
+  const mainMap = { role:"missions", achievements:"achievements", checkin:"checkin", reward:"reward", kpi:"kpi" };
+  const targetTab = isAdv ? nav : (mainMap[nav] || "missions");
+
+  // 立繪 hero panel 只在「角色」頁顯示
+  const heroPanel = document.querySelector("#screen-child .hero-panel");
+  if (heroPanel) heroPanel.style.display = (nav === "role") ? "" : "none";
+
+  // 顯示對應內容 panel
+  document.querySelectorAll("#screen-child .tab-panel").forEach(p=>{
+    p.classList.toggle("active", p.dataset.tab === targetTab);
+  });
+
+  // 冒險子頁顯示「返回角色」浮鈕
+  const backBtn = document.getElementById("childAdvBack");
+  if (backBtn) backBtn.style.display = isAdv ? "" : "none";
+
+  // 底部列 highlight(進冒險子頁時仍 highlight 角色)
+  const activeNav = isAdv ? "role" : nav;
+  document.querySelectorAll("#childBottomNav .bn-item").forEach(b=>{
+    b.classList.toggle("active", b.dataset.nav === activeNav);
+  });
+
+  window.scrollTo(0, 0);
+  try { Sound.play("soft"); } catch {}
+}
+document.querySelectorAll("#childBottomNav .bn-item").forEach(b=>{
+  b.addEventListener("click", ()=> childNavTo(b.dataset.nav));
+});
+document.querySelectorAll(".adv-entry").forEach(b=>{
+  b.addEventListener("click", ()=> childNavTo(b.dataset.adv));
+});
+document.getElementById("childAdvBack")?.addEventListener("click", ()=> childNavTo("role"));
+
+/* 底部紅點同步(今日未簽到 / 成就可領) */
+function syncBottomDots(){
+  [["checkinDot","bnCheckinDot"], ["achvDot","bnAchvDot"]].forEach(([src,dst])=>{
+    const s = document.getElementById(src), d = document.getElementById(dst);
+    if (s && d){
+      const on = s.style.display && s.style.display !== "none";
+      d.style.display = on ? "block" : "none";
+    }
+  });
+}
+const _v54_renderChildAll = renderChildAll;
+renderChildAll = function(){
+  _v54_renderChildAll();
+  try { syncBottomDots(); } catch {}
+};
 
 (function bootstrap(){
   if (STATE.mode === "LOCAL"){
