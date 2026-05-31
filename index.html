@@ -1073,16 +1073,16 @@
 
     .hero-info-col{display:flex;flex-direction:column;gap:8px;min-width:0}
     .hero-info-col h2{margin:0;font-size:22px;font-weight:900;letter-spacing:.04em}
-    /* v5.5 貨幣改方框(金幣/熔晶/連勝) */
-    .currency-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    /* v5.6 貨幣直排三列(金幣/熔晶/連勝),縮小,靠人物右邊 */
+    .currency-row{display:flex;flex-direction:column;gap:5px;width:max-content;max-width:150px}
     .currency-chip{
-      display:flex;flex-direction:column;align-items:center;gap:3px;
-      padding:9px 4px;border-radius:12px;
+      display:flex;flex-direction:row;align-items:center;gap:6px;
+      padding:5px 10px;border-radius:9px;
       background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.15)),var(--surface);
-      border:1px solid var(--border-strong);font-family:var(--mono);font-weight:800;font-size:14px;
+      border:1px solid var(--border-strong);font-family:var(--mono);font-weight:700;font-size:11px;
     }
-    .currency-chip b{font-size:16px}
-    .currency-chip .ic{width:22px;height:22px;flex:0 0 auto}
+    .currency-chip b{font-size:13px;margin-left:auto}
+    .currency-chip .ic{width:15px;height:15px;flex:0 0 auto}
     .currency-chip.coin{color:#fbbf24;border-color:rgba(251,191,36,.4)}
     .currency-chip.shard{color:#22d3ee;border-color:rgba(34,211,238,.4)}
     .currency-chip.exp{color:#84cc16;border-color:rgba(132,204,22,.4)}
@@ -1390,19 +1390,20 @@
     .calendar-wrap{
       display:grid;
       grid-template-columns: repeat(7, 1fr);
-      gap:4px;
-      max-width:520px; margin:0 auto;
+      gap:3px;
+      width:100%; max-width:340px; margin:0 auto;
     }
     .cal-head{
       font-size:11px;color:var(--text-mute);letter-spacing:.1em;text-align:center;padding:4px 0;
     }
     .cal-cell{
-      height:38px; border-radius:8px;
+      height:30px; min-width:0; border-radius:6px;
       background:rgba(15,23,42,.5);
       border:1px solid var(--border);
       display:flex;flex-direction:column;align-items:center;justify-content:center;
-      font-size:13px;color:var(--text-dim);position:relative;
+      font-size:11px;color:var(--text-dim);position:relative;overflow:hidden;
     }
+    .cal-head{ font-size:10px !important; padding:2px 0 !important; }
     .cal-cell.empty{ background:transparent; border:none }
     .cal-cell.signed{
       background:linear-gradient(180deg,rgba(16,185,129,.25),rgba(16,185,129,.05));
@@ -1739,6 +1740,25 @@
     .quad-task{ cursor:grab; }
     .quad-task:active{ cursor:grabbing; }
 
+    /* v5.6 道具背包 */
+    .consumable-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    @media (max-width:420px){ .consumable-grid{ grid-template-columns:repeat(3,1fr); } }
+    .consumable-item{
+      display:flex;flex-direction:column;align-items:center;gap:3px;
+      padding:8px 4px;border-radius:10px;cursor:pointer;
+      background:var(--surface);border:1px solid var(--border-strong);
+      transition:transform .1s, border-color .15s;position:relative;
+    }
+    .consumable-item:hover{ transform:translateY(-2px); border-color:var(--cyan); }
+    .consumable-item:active{ transform:scale(.95); }
+    .consumable-item .ci-icon{ width:32px;height:32px }
+    .consumable-item .ci-icon svg{ width:100%;height:100% }
+    .consumable-item .ci-name{ font-size:10px;color:var(--text-dim);text-align:center;line-height:1.2 }
+    .consumable-item .ci-qty{
+      position:absolute;top:3px;right:4px;font-family:var(--mono);font-weight:900;font-size:11px;
+      color:#0b1220;background:var(--gold);border-radius:999px;padding:0 5px;min-width:16px;text-align:center;
+    }
+
     /* ====== v5.4 底部導覽列 + 冒險入口 + 角色頁兩欄 ====== */
     .bottom-nav{
       position:fixed; left:0; right:0; bottom:0; z-index:60;
@@ -1994,6 +2014,12 @@
           <div class="squad-mini">—</div>
           <div class="squad-info"><b>未派坐騎</b><span class="role">MOUNT</span></div>
         </div>
+      </div>
+
+      <!-- 我的道具(商店買的藥水/寶箱,點擊使用) -->
+      <div id="consumablesWrap" style="margin-top:12px;display:none">
+        <div class="card-title" style="margin-bottom:8px">我的道具 <span class="tag">點擊使用</span></div>
+        <div class="consumable-grid" id="consumableGrid"></div>
       </div>
     </div>
 
@@ -6758,26 +6784,7 @@ const SHOP_ITEMS = [
   { id:"honor_charm",   name:"榮譽護符",   desc:"恢復 10 點榮譽",       currency:"coins", price:90,
     icon:`<svg viewBox="0 0 32 32"><path d="M16 4 L24 8 L24 18 Q24 26 16 30 Q8 26 8 18 L8 8 Z" fill="#fbbf24" stroke="#92400e" stroke-width="1.5"/><text x="16" y="20" text-anchor="middle" font-size="10" font-weight="900" fill="#7c2d12">譽</text></svg>`,
     apply:(p)=>{ p.honor = Math.min(100, (p.honor||0)+10); } },
-  { id:"pet_feed",      name:"寵物餵食包", desc:"所有寵物 +30 經驗",  currency:"coins", price:50,
-    icon:`<svg viewBox="0 0 32 32"><rect x="6" y="10" width="20" height="18" rx="2" fill="#92400e" stroke="#0b1220"/><rect x="8" y="6" width="16" height="6" fill="#a16207"/><circle cx="12" cy="20" r="2" fill="#fbbf24"/><circle cx="20" cy="20" r="2" fill="#fbbf24"/><circle cx="16" cy="24" r="2" fill="#fbbf24"/></svg>`,
-    apply:(p)=>{ (p.pets||[]).forEach(c => {
-      if (c.stage === 0) return;
-      c.exp = (c.exp||0) + 30;
-      while (c.stage < 4 && c.exp >= (PET_STAGE_EXP_NEED[c.stage]||9999)){
-        c.exp -= PET_STAGE_EXP_NEED[c.stage]; c.stage++;
-        if (c.stage === 4) c.rarity = upgradeFinalRarity(c.rarity);
-      }
-    }); } },
-  { id:"mount_feed",    name:"坐騎餵食包", desc:"所有坐騎 +50 經驗",  currency:"shards", price:18,
-    icon:`<svg viewBox="0 0 32 32"><rect x="6" y="10" width="20" height="18" rx="2" fill="#7c2d12" stroke="#0b1220"/><rect x="8" y="6" width="16" height="6" fill="#dc2626"/><circle cx="12" cy="20" r="2" fill="#fbbf24"/><circle cx="20" cy="20" r="2" fill="#fbbf24"/><circle cx="16" cy="24" r="2" fill="#fbbf24"/></svg>`,
-    apply:(p)=>{ (p.mounts||[]).forEach(c => {
-      if (c.stage === 0) return;
-      c.exp = (c.exp||0) + 50;
-      while (c.stage < 4 && c.exp >= (MOUNT_STAGE_EXP_NEED[c.stage]||9999)){
-        c.exp -= MOUNT_STAGE_EXP_NEED[c.stage]; c.stage++;
-        if (c.stage === 4) c.rarity = upgradeFinalRarity(c.rarity);
-      }
-    }); } },
+  // v5.5:寵物/坐騎餵食包已移除 — 寵物坐騎只靠副本/成就/簽到成長,不能買 EXP
   { id:"chest_basic",   name:"普通裝備寶箱", desc:"開出綠/藍裝備", currency:"coins", price:200,
     icon:`<svg viewBox="0 0 32 32"><rect x="4" y="12" width="24" height="14" rx="2" fill="#10b981" stroke="#0b1220"/><path d="M4 12 Q4 6 16 6 Q28 6 28 12 Z" fill="#34d399" stroke="#0b1220"/><rect x="13" y="14" width="6" height="6" fill="#fef3c7"/></svg>`,
     apply:(p)=>{
@@ -7261,6 +7268,13 @@ function renderShop(){
   });
 }
 
+/* 消耗品(買了存背包,到人物頁點擊才使用);其餘購買即時生效 */
+const CONSUMABLE_IDS = new Set([
+  "potion_hp","potion_mp","potion_hp_big","potion_mp_big","potion_full",
+  "exp_pill","exp_pill_big","honor_charm",
+  "chest_basic","chest_rare","chest_epic","chest_legend",
+]);
+
 async function buyShopItem(id){
   const item = SHOP_ITEMS.find(x => x.id === id); if (!item) return;
   const p = STATE.childProfile;
@@ -7271,14 +7285,62 @@ async function buyShopItem(id){
     if ((p.coins||0) < item.price) return toast("金幣不足", "warn");
     p.coins -= item.price;
   }
-  item.apply(p);
+  if (CONSUMABLE_IDS.has(id)){
+    // 存入道具背包,不立即使用
+    p.consumables = p.consumables || {};
+    p.consumables[id] = (p.consumables[id]||0) + 1;
+    toast(`已購買「${item.name}」放入道具,到「角色→人物」點擊使用`, "success");
+  } else {
+    item.apply(p);   // 即時類(金幣/熔晶禮包、升級卷、守護符)立即生效
+    toast("購買成功：" + item.name, "success");
+  }
+  try { Sound.play("shop"); } catch {}
   await dbSetChildProfile(p.childId, {
     coins: p.coins, shards: p.shards, scrolls: p.scrolls,
     pets: p.pets, mounts: p.mounts, hp: p.hp, mp: p.mp,
+    consumables: p.consumables, inventory: p.inventory,
   });
-  toast("購買成功：" + item.name, "success");
   if (STATE.mode === "LOCAL") await loadAllForChild(p.childId);
   renderAll();
+}
+
+/* 使用道具 */
+async function useConsumable(id){
+  const p = STATE.childProfile;
+  if (!p.consumables || !(p.consumables[id]>0)) return;
+  const item = SHOP_ITEMS.find(x => x.id === id); if (!item) return;
+  item.apply(p);
+  p.consumables[id]--;
+  if (p.consumables[id] <= 0) delete p.consumables[id];
+  try { Sound.play(/chest/.test(id) ? "chest" : "right"); } catch {}
+  toast(`使用了「${item.name}」`, "success");
+  await dbSetChildProfile(p.childId, {
+    consumables: p.consumables, hp:p.hp, mp:p.mp, exp:p.exp,
+    honor:p.honor, inventory:p.inventory, coins:p.coins, shards:p.shards,
+  });
+  if (STATE.mode === "LOCAL") await loadAllForChild(p.childId);
+  renderAll();
+}
+
+/* 渲染人物頁道具背包 */
+function renderConsumables(){
+  const wrap = document.getElementById("consumablesWrap");
+  const grid = document.getElementById("consumableGrid");
+  if (!wrap || !grid) return;
+  const p = STATE.childProfile;
+  const cons = p?.consumables || {};
+  const ids = Object.keys(cons).filter(k => cons[k] > 0);
+  if (ids.length === 0){ wrap.style.display = "none"; return; }
+  wrap.style.display = "";
+  grid.innerHTML = "";
+  ids.forEach(id => {
+    const item = SHOP_ITEMS.find(x => x.id === id); if (!item) return;
+    const el = document.createElement("div");
+    el.className = "consumable-item";
+    el.innerHTML = `<div class="ci-icon">${item.icon}</div><div class="ci-name">${item.name}</div><div class="ci-qty">${cons[id]}</div>`;
+    el.addEventListener("click", ()=> useConsumable(id));
+    grid.appendChild(el);
+  });
 }
 
 /* ===========================================================
@@ -7826,8 +7888,14 @@ const Sound = {
       case "wrong":   tone(220, .25,"square",.07); setTimeout(()=>tone(180,.25,"square",.07),120); break;
       case "victory": arpeggio([523, 659, 784, 988, 1175], .08, "triangle", .08); break;
       case "lose":    arpeggio([392, 330, 262, 220], .12, "sawtooth", .07); break;
-      case "levelup": arpeggio([523, 659, 784, 1046, 1318, 1568], .07, "sine", .09); break;
-      case "chest":   arpeggio([784, 880, 988, 1175], .06, "triangle", .08); break;
+      case "levelup": // 尊榮升級號角:長上行琶音 + 高音和聲層
+        arpeggio([392,523,659,784,1046,1318,1568,2093], .075, "triangle", .10);
+        arpeggio([523,659,784,1046], .15, "sine", .05);
+        break;
+      case "chest":   // 開箱:明亮上行 + 高音鈴聲
+        arpeggio([659,784,988,1318], .06, "triangle", .09);
+        arpeggio([1318,1568,2093], .12, "sine", .045);
+        break;
       case "broken":  tone(120,.4,"sawtooth",.1); setTimeout(()=>tone(80,.5,"sawtooth",.1),100); break;
       case "forge":   tone(330,.06,"square",.06); setTimeout(()=>tone(440,.06,"square",.06),60); break;
       case "evolve":  arpeggio([392, 494, 587, 698, 880], .08, "sine", .09); break;
@@ -7914,7 +7982,63 @@ const Sound = {
     this.bgmOsc.forEach(o => { try{o.stop()}catch{} });
     this.bgmOsc = [];
   },
-  toggleBgm(){ this.bgmOn = !this.bgmOn; lsSet("stb.bgmOn", this.bgmOn); if (this.bgmOn) this.startBgm(); else this.stopBgm(); updateSoundUi(); },
+
+  /* v5.6 副本戰鬥音樂(快節奏 + 鼓點 + 緊張琶音,節奏頻率感) */
+  startBattleBgm(){
+    if (!this.bgmOn) return;
+    const ctx = this.ensure(); if (!ctx) return;
+    this.stopBgm();   // 暫停一般 BGM
+    if (this._battleTimer) clearInterval(this._battleTimer);
+    this.battleGain = ctx.createGain();
+    this.battleGain.gain.value = .2;
+    this.battleGain.connect(ctx.destination);
+    const NF = { A2:110, A3:220, C4:261.63, E4:329.63, G3:196, B3:246.94, D4:293.66, F4:349.23, C3:130.81 };
+    const seq = ["A3","E4","C4","E4","A3","E4","C4","E4","G3","D4","B3","D4","F4","C4","A3","C4"];
+    const beat = 0.16;
+    let i = 0;
+    const tick = ()=>{
+      if (!this.battleGain) return;
+      const t = ctx.currentTime;
+      // 緊張琶音
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = "sawtooth"; o.frequency.value = NF[seq[i % seq.length]];
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1700;
+      o.connect(lp); lp.connect(g); g.connect(this.battleGain);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.28, t+.01);
+      g.gain.exponentialRampToValueAtTime(.001, t + beat*0.9);
+      o.start(t); o.stop(t + beat);
+      // 鼓點 kick(每兩步)
+      if (i % 2 === 0){
+        const k = ctx.createOscillator(); const kg = ctx.createGain();
+        k.type = "sine"; k.frequency.setValueAtTime(125, t); k.frequency.exponentialRampToValueAtTime(42, t+.12);
+        k.connect(kg); kg.connect(this.battleGain);
+        kg.gain.setValueAtTime(.55, t); kg.gain.exponentialRampToValueAtTime(.001, t+.15);
+        k.start(t); k.stop(t + .16);
+      }
+      // 低音(每四步)
+      if (i % 4 === 0){
+        const b = ctx.createOscillator(); const bg = ctx.createGain();
+        b.type = "triangle"; b.frequency.value = NF.A2;
+        b.connect(bg); bg.connect(this.battleGain);
+        bg.gain.setValueAtTime(0, t); bg.gain.linearRampToValueAtTime(.42, t+.02);
+        bg.gain.exponentialRampToValueAtTime(.001, t + beat*3.6);
+        b.start(t); b.stop(t + beat*4);
+      }
+      i++;
+    };
+    tick();
+    this._battleTimer = setInterval(tick, beat*1000);
+  },
+  stopBattleBgm(){
+    if (this._battleTimer){ clearInterval(this._battleTimer); this._battleTimer = null; }
+    if (this.battleGain){
+      try { this.battleGain.gain.exponentialRampToValueAtTime(.001, this.ctx.currentTime+.2); } catch{}
+      this.battleGain = null;
+    }
+    if (this.bgmOn) setTimeout(()=> this.startBgm(), 280);  // 恢復一般 BGM
+  },
+
+  toggleBgm(){ this.bgmOn = !this.bgmOn; lsSet("stb.bgmOn", this.bgmOn); if (this.bgmOn) this.startBgm(); else { this.stopBgm(); this.stopBattleBgm(); } updateSoundUi(); },
   toggleSfx(){ this.sfxOn = !this.sfxOn; lsSet("stb.sfxOn", this.sfxOn); updateSoundUi(); this.play("click"); },
 };
 function updateSoundUi(){
@@ -10736,14 +10860,23 @@ document.getElementById("btnShopHelp")?.addEventListener("click", ()=>{
   });
 });
 
-/* v5.5:副本通關 → 出戰寵物/坐騎成長(取代花錢餵食) */
+/* v5.5/5.6:副本通關成長 + 戰鬥音樂切換 */
 const _v55_endBattle = (typeof endBattle === "function") ? endBattle : null;
 if (_v55_endBattle){
   endBattle = async function(win){
+    try { Sound.stopBattleBgm(); } catch {}
     await _v55_endBattle(win);
     if (win){ try { await gainCreatureExp(35); } catch {} }
   };
 }
+const _v56_startBattle = (typeof startBattle === "function") ? startBattle : null;
+if (_v56_startBattle){
+  startBattle = async function(d){
+    await _v56_startBattle(d);
+    try { Sound.startBattleBgm(); } catch {}
+  };
+}
+document.getElementById("btnFleeBattle")?.addEventListener("click", ()=>{ try { Sound.stopBattleBgm(); } catch {} });
 
 /* AI 戰績分析:展開/收合(預設 2 條,展開看全部) */
 let _aiExpanded = false;
@@ -10766,6 +10899,7 @@ const _v55_renderChildAll = renderChildAll;
 renderChildAll = function(){
   _v55_renderChildAll();
   try { syncBottomDots(); } catch {}
+  try { renderConsumables(); } catch {}
 };
 
 /* 進入孩子端時預設停在「任務」主軸 */
