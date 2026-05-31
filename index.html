@@ -1077,16 +1077,16 @@
 
     .hero-info-col{display:flex;flex-direction:column;gap:8px;min-width:0}
     .hero-info-col h2{margin:0;font-size:22px;font-weight:900;letter-spacing:.04em}
-    /* v5.6 貨幣直排三列(金幣/熔晶/連勝),縮小,靠人物右邊 */
-    .currency-row{display:flex;flex-direction:column;gap:5px;width:max-content;max-width:150px}
+    /* v5.8 貨幣直排三列(金幣/熔晶/連勝),放大寬度,靠人物右邊 */
+    .currency-row{display:flex;flex-direction:column;gap:6px;width:100%}
     .currency-chip{
-      display:flex;flex-direction:row;align-items:center;gap:6px;
-      padding:5px 10px;border-radius:9px;
-      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.15)),var(--surface);
-      border:1px solid var(--border-strong);font-family:var(--mono);font-weight:700;font-size:11px;
+      display:flex;flex-direction:row;align-items:center;gap:8px;
+      padding:8px 14px;border-radius:11px;
+      background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.18)),var(--surface);
+      border:1px solid var(--border-strong);font-family:var(--mono);font-weight:700;font-size:13px;
     }
-    .currency-chip b{font-size:13px;margin-left:auto}
-    .currency-chip .ic{width:15px;height:15px;flex:0 0 auto}
+    .currency-chip b{font-size:16px;margin-left:auto}
+    .currency-chip .ic{width:19px;height:19px;flex:0 0 auto}
     .currency-chip.coin{color:#fbbf24;border-color:rgba(251,191,36,.4)}
     .currency-chip.shard{color:#22d3ee;border-color:rgba(34,211,238,.4)}
     .currency-chip.exp{color:#84cc16;border-color:rgba(132,204,22,.4)}
@@ -1809,12 +1809,22 @@
 
     /* 版本號(右上角,用來判斷是否快取舊版) */
     .hero-panel{ position:relative; }
+    /* 右上角:版本號 + 標準模式(垂直) */
+    .hero-corner{ position:absolute; top:8px; right:10px; z-index:3; display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
     .ver-tag{
-      position:absolute; top:8px; right:10px; z-index:3;
       font-family:var(--mono); font-size:10px; font-weight:700; color:var(--text-mute);
       background:rgba(0,0,0,.35); padding:2px 7px; border-radius:999px; border:1px solid var(--border);
     }
+    .hero-mode{
+      font-size:10px; font-weight:700; color:var(--cyan); white-space:nowrap;
+      background:var(--cyan-soft); padding:2px 8px; border-radius:999px; border:1px solid rgba(6,182,212,.35);
+    }
     .compact-bars.full{ max-width:none; margin-top:12px; }
+
+    /* 屬性一排(不換行,縮小;塞不下可橫向捲) */
+    .stat-row{ display:flex; gap:5px; flex-wrap:nowrap; margin-top:10px; overflow-x:auto; padding-bottom:2px; }
+    .stat-row::-webkit-scrollbar{ height:0 }
+    .stat-row .stat-pill{ flex:0 0 auto; padding:4px 9px; font-size:11px; }
 
     /* 角色頁 hero 兩欄(立繪左、名稱貨幣右);手機也維持兩欄(立繪縮小) */
     .hero-grid-v36{ grid-template-columns: 200px 1fr !important; align-items:start; }
@@ -1969,7 +1979,10 @@
 
     <!-- RPG 主面板 v3.6：封號 + 立繪 + LV 同框 -->
     <div class="hero-panel">
-      <span class="ver-tag" id="appVer">v?</span>
+      <div class="hero-corner">
+        <span class="ver-tag" id="appVer">v?</span>
+        <span class="hero-mode" id="cHonorMode">標準模式</span>
+      </div>
       <!-- 上半:立繪(左) + 名稱貨幣(右),兩欄並排 -->
       <div class="hero-grid-v36">
         <div class="hero-card">
@@ -2010,13 +2023,12 @@
       </div>
 
       <!-- 再下方全寬:屬性 -->
-      <div class="row stat-row" style="gap:6px;flex-wrap:wrap;margin-top:10px">
+      <div class="stat-row">
         <span class="stat-pill">力量 <b id="cStatATK">10</b></span>
         <span class="stat-pill">防禦 <b id="cStatDEF">5</b></span>
         <span class="stat-pill">速度 <b id="cStatSPD">10</b></span>
         <span class="stat-pill">幸運 <b id="cStatLUCK">5</b></span>
         <span class="stat-pill" style="border-color:rgba(245,158,11,.4);color:#fde68a">榮譽 <b id="cHonor">80</b></span>
-        <span class="stat-pill" id="cHonorMode" style="color:var(--cyan)">標準模式</span>
       </div>
 
       <!-- 出戰寵物/坐騎(全寬) -->
@@ -10951,7 +10963,7 @@ enterRoleScreen = async function(){
 };
 
 /* v5.8 版本號(改版時 bump,顯示在人物頁右上角,用來判斷是否載到舊快取) */
-const APP_VERSION = "5.8";
+const APP_VERSION = "5.9";
 (function showVer(){
   const el = document.getElementById("appVer");
   if (el) el.textContent = "v" + APP_VERSION;
