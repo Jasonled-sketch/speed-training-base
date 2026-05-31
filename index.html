@@ -7699,64 +7699,63 @@ const Sound = {
     const ctx = this.ensure(); if (!ctx) return;
     this.stopBgm();
     this.bgmGain = ctx.createGain();
-    this.bgmGain.gain.value = .045;
+    this.bgmGain.gain.value = .30;
     this.bgmGain.connect(ctx.destination);
 
-    // v5.1 卡農 in D(Pachelbel's Canon,公共領域)— 輕快流動琶音版
+    // v5.2 卡農 in D — 合成弦樂版(鋸齒波 + 低通柔化 + 顫音 + 慢起弓),節奏中速
     const F = {
-      // 低音(大提琴)
       D2:73.42, A1:55.00, B1:61.74, Fs1:46.25, G1:49.00,
-      // 中高音琶音
-      D3:146.83, Fs3:185.00, A3:220.00, B3:246.94, Cs4:277.18, E4:329.63, Fs4:369.99, G3:196.00,
-      D4:293.66, A4:440.00, B4:493.88, Cs5:554.37, D5:587.33, Fs5:739.99, E5:659.25, G4:392.00,
+      Fs3:185.00, A3:220.00, B3:246.94, Cs4:277.18, D4:293.66, E4:329.63, Fs4:369.99, G4:392.00,
+      A4:440.00, B4:493.88, Cs5:554.37, D5:587.33, E5:659.25, Fs5:739.99,
     };
-    // 卡農經典和弦進行:D - A - Bm - F#m - G - D - G - A
-    // 每個和弦:低音根音 + 4 個八分音符上行琶音(輕快流動)
+
+    // 合成弦樂單音:鋸齒波(泛音豐富像弦)→ 低通濾波(柔化)→ 顫音 → 慢起弓 ADSR
+    const string = (freq, t, dur, peak)=>{
+      const o = ctx.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.value = freq;
+      // 顫音(vibrato):弦樂的靈魂
+      const vib = ctx.createOscillator();
+      vib.type = "sine"; vib.frequency.value = 5.2;
+      const vibAmt = ctx.createGain();
+      vibAmt.gain.value = freq * 0.005;
+      vib.connect(vibAmt); vibAmt.connect(o.frequency);
+      // 低通濾波:去掉鋸齒的刺耳高頻,變得溫潤
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.value = 2000; lp.Q.value = 0.7;
+      // 慢起弓 ADSR
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(peak, t + dur*0.28);     // 慢漸強(像拉弓)
+      g.gain.linearRampToValueAtTime(peak*0.82, t + dur*0.72);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);    // 緩收
+      o.connect(lp); lp.connect(g); g.connect(this.bgmGain);
+      o.start(t); o.stop(t + dur + 0.05);
+      vib.start(t); vib.stop(t + dur + 0.05);
+    };
+
+    // 卡農進行:D-A-Bm-F#m-G-D-G-A。每和弦:大提琴根音 + 弦樂和聲 pad + 小提琴主旋律(兩個音)
     const prog = [
-      { bass:"D2",  arp:["D4","Fs4","A4","D5"]  },
-      { bass:"A1",  arp:["A3","Cs4","E4","A4"]  },
-      { bass:"B1",  arp:["B3","D4","Fs4","B4"]  },
-      { bass:"Fs1", arp:["Fs3","A3","Cs4","Fs4"]},
-      { bass:"G1",  arp:["G3","B3","D4","G4"]   },
-      { bass:"D2",  arp:["D4","Fs4","A4","D5"]  },
-      { bass:"G1",  arp:["G3","B3","D4","G4"]   },
-      { bass:"A1",  arp:["A3","Cs4","E4","A4"]  },
+      { bass:"D2",  pad:["A3","D4","Fs4"],   mel:["Fs5","E5"]  },
+      { bass:"A1",  pad:["A3","Cs4","E4"],   mel:["D5","Cs5"]  },
+      { bass:"B1",  pad:["Fs3","B3","D4"],   mel:["B4","A4"]   },
+      { bass:"Fs1", pad:["Fs3","A3","Cs4"],  mel:["B4","Cs5"]  },
+      { bass:"G1",  pad:["B3","D4","G4"],    mel:["D5","Cs5"]  },
+      { bass:"D2",  pad:["A3","D4","Fs4"],   mel:["B4","A4"]   },
+      { bass:"G1",  pad:["B3","D4","G4"],    mel:["G4","Fs4"]  },
+      { bass:"A1",  pad:["A3","Cs4","E4"],   mel:["G4","E4"]   },
     ];
-    const beat = 0.46;            // 每個和弦的長度(輕快但不趕)
-    const eighth = beat / 4;      // 每拍 4 個八分音符
+    const beat = 1.45;   // 節奏中速(弦樂悠揚)
     let ci = 0;
 
     const tick = ()=>{
       if (!this.bgmGain) return;
-      const t0 = ctx.currentTime;
+      const t = ctx.currentTime;
       const ch = prog[ci % prog.length];
-      // 低音根音(溫暖長音)
-      const bo = ctx.createOscillator(); const bg = ctx.createGain();
-      bo.type = "sine"; bo.frequency.value = F[ch.bass];
-      bo.connect(bg); bg.connect(this.bgmGain);
-      bg.gain.setValueAtTime(0, t0);
-      bg.gain.linearRampToValueAtTime(.42, t0 + .03);
-      bg.gain.exponentialRampToValueAtTime(.001, t0 + beat*0.96);
-      bo.start(t0); bo.stop(t0 + beat);
-      // 4 個八分音符琶音(卡農的流動感)
-      ch.arp.forEach((n, k)=>{
-        const t = t0 + k*eighth;
-        const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.type = "triangle"; o.frequency.value = F[n];
-        o.connect(g); g.connect(this.bgmGain);
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(.34, t + .01);
-        g.gain.exponentialRampToValueAtTime(.001, t + eighth*0.95);
-        o.start(t); o.stop(t + eighth);
-        // 高八度亮點(像鈴聲,輕快)
-        const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
-        o2.type = "square"; o2.frequency.value = F[n]*2;
-        o2.connect(g2); g2.connect(this.bgmGain);
-        g2.gain.setValueAtTime(0, t);
-        g2.gain.linearRampToValueAtTime(.035, t + .005);
-        g2.gain.exponentialRampToValueAtTime(.001, t + eighth*0.5);
-        o2.start(t); o2.stop(t + eighth*0.6);
-      });
+      string(F[ch.bass], t, beat*1.0, .26);                    // 大提琴低音
+      ch.pad.forEach(n => string(F[n], t, beat*0.95, .10));    // 弦樂和聲 pad
+      string(F[ch.mel[0]], t,            beat*0.52, .30);      // 小提琴旋律 上
+      string(F[ch.mel[1]], t + beat*0.5, beat*0.50, .30);      // 小提琴旋律 下
       ci++;
     };
     tick();
@@ -8030,11 +8029,9 @@ renderChildTasks = function(){
     if (done.length === 0) doneEl.innerHTML = `<div class="empty">尚無已送審 / 已完成任務</div>`;
     else done.forEach(t => doneEl.appendChild(renderTaskCard(t, "child")));
   }
-  // 階級提示
-  const rb = p.reborn || 0;
-  const canMove = rb >= 3;  // 疾風執行官 = tier 4 = reborn 3
+  // v5.2:開放自由拖曳,鼓勵孩子自主規劃
   const hint = $("#quadDragHint");
-  if (hint) hint.textContent = canMove ? "✓ 已達『疾風執行官』，可自由拖曳任務調整優先級。" : "階級未達『疾風執行官』，拖曳任務需家長核准。";
+  if (hint) hint.textContent = "💡 長按任務卡可拖曳到不同象限,自己安排優先順序 — 學會分辨「重要」和「緊急」是最棒的能力!";
   bindQuadDnD();
 };
 
@@ -8563,22 +8560,16 @@ bindQuadDnD = function(){
         const t = STATE.tasks.find(x => x.taskId === taskId); if (!t) return;
         // 同象限拖回不處理
         if ((t.priority||"q2") === newQ && !t.pendingPriorityMove) return;
-        const rb = p.reborn || 0;
-        if (rb >= 3){
-          await dbUpdateTask(taskId, { priority: newQ, pendingPriorityMove: null });
-          Sound.play("pop");
-          toast(`已移至 ${({q1:"紅",q2:"黃",q3:"藍",q4:"綠"})[newQ]} 象限`, "success");
-        } else {
-          await dbUpdateTask(taskId, { pendingPriorityMove: newQ });
-          await dbAddLogSafe({
-            actorId: STATE.user.uid, actorRole:"child",
-            action:"task_pri_request",
-            message:`孩子請求將「${t.title}」移至 ${newQ} 象限`,
-            childId: p.childId,
-          });
-          Sound.play("alert");
-          toast("已送出移動申請，待家長核准", "warn");
-        }
+        // v5.2:開放孩子自由拖曳調整優先級(不需家長核准),培養自主規劃能力
+        await dbUpdateTask(taskId, { priority: newQ, pendingPriorityMove: null });
+        Sound.play("pop");
+        toast(`已移至 ${({q1:"紅",q2:"黃",q3:"藍",q4:"綠"})[newQ]} 象限`, "success");
+        await dbAddLogSafe({
+          actorId: STATE.user.uid, actorRole:"child",
+          action:"task_pri_self",
+          message:`孩子自行將「${t.title}」移至 ${({q1:"紅",q2:"黃",q3:"藍",q4:"綠"})[newQ]} 象限`,
+          childId: p.childId,
+        });
         if (STATE.mode === "LOCAL") await loadAllForChild(p.childId);
         renderAll();
       } finally {
