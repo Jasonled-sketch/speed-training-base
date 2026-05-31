@@ -4245,15 +4245,55 @@ function renderParentKPI(){
 function renderParentLinkPanel(){
   const wrap = $("#parentLinkedChildren");
   wrap.innerHTML = "";
+  if (STATE.parentLinkedChildren.length === 0){
+    wrap.innerHTML = `<div class="small muted">尚未綁定任何孩子</div>`;
+    return;
+  }
   STATE.parentLinkedChildren.forEach(c => {
     const el = document.createElement("div");
     el.className = "row";
+    el.style.cssText = "align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border)";
     el.innerHTML = `
-      <div class="avatar">${(c.displayName||"CH").slice(0,2)}</div>
-      <div><div class="small">${escapeHtml(c.displayName)}</div><div class="small muted">${escapeHtml(c.email)}</div></div>
+      <div class="row" style="gap:8px;align-items:center;flex:1;min-width:0">
+        <div class="avatar">${escapeHtml((c.displayName||"CH").slice(0,2))}</div>
+        <div style="min-width:0"><div class="small">${escapeHtml(c.displayName||"未命名")}</div><div class="small muted" style="word-break:break-all">${escapeHtml(c.email||"")}</div></div>
+      </div>
+      <button class="btn sm" style="background:#7f1d1d;color:#fecaca;border-color:#991b1b;flex:0 0 auto">解除綁定</button>
     `;
+    el.querySelector("button").addEventListener("click", ()=> unbindChild(c.uid, c.displayName, c.email));
     wrap.appendChild(el);
   });
+}
+
+/* 解除綁定某個孩子(把該 uid 從家長 linkedChildIds 移除) */
+async function unbindChild(childUid, name, email){
+  const ok = await vConfirm({
+    color:"danger", title:"解除綁定",
+    body:`確定要解除與這個孩子的綁定嗎?<br><b>${escapeHtml(name||"")}</b> <span class="small muted">${escapeHtml(email||"")}</span><br><div class="small muted" style="margin-top:6px">只是移除你這端的綁定,不會刪除孩子的資料。之後可重新綁定。</div>`,
+    yes:"解除綁定", no:"取消"
+  });
+  if (!ok) return;
+  if (STATE.mode === "LOCAL"){
+    const links = lsGet(LS_KEYS.links, {});
+    links[STATE.user.uid] = (links[STATE.user.uid]||[]).filter(id => id !== childUid);
+    lsSet(LS_KEYS.links, links);
+    const users = lsGet(LS_KEYS.users, {});
+    if (users[STATE.user.uid]){ users[STATE.user.uid].linkedChildIds = links[STATE.user.uid]; lsSet(LS_KEYS.users, users); }
+  } else {
+    const me = await dbGetUser(STATE.user.uid);
+    const next = (me?.linkedChildIds||[]).filter(id => id !== childUid);
+    await dbSetUser(STATE.user.uid, { linkedChildIds: next });
+  }
+  // 若解除的是當前選中的孩子,清掉選擇
+  if (STATE.selectedChildId === childUid) STATE.selectedChildId = null;
+  Sound.play("wrong");
+  toast("已解除綁定", "success");
+  await loadParentLinks();
+  if (STATE.parentLinkedChildren.length > 0 && !STATE.selectedChildId){
+    STATE.selectedChildId = STATE.parentLinkedChildren[0].uid;
+    await loadAllForChild(STATE.selectedChildId);
+  }
+  renderAll();
 }
 $("#btnBindChild")?.addEventListener("click", async ()=>{
   const email = $("#bindChildEmail").value.trim();
@@ -10963,7 +11003,7 @@ enterRoleScreen = async function(){
 };
 
 /* v5.8 版本號(改版時 bump,顯示在人物頁右上角,用來判斷是否載到舊快取) */
-const APP_VERSION = "5.9";
+const APP_VERSION = "6.0";
 (function showVer(){
   const el = document.getElementById("appVer");
   if (el) el.textContent = "v" + APP_VERSION;
