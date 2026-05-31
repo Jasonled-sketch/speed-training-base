@@ -1709,6 +1709,39 @@
     .drop-icon{width:64px; height:64px; margin:6px auto; border-radius:12px; border:2px solid var(--rc, var(--border-strong)); display:grid; place-items:center; background:#0b1220}
     .drop-icon svg{width:70%;height:70%}
 
+    /* ============================================================
+       v5.0 手機智慧效能模式(治卡頓頻閃)
+       手機自動關掉「持續性 GPU 重負荷」效果:毛玻璃、旋轉模糊光環、
+       背景掃光、無限脈動。保留「一次性儀式」(寶箱開箱/升級/強化閃光)
+       與寵物實體動畫(降速減負)。桌機完全不受影響,維持華麗。
+       ============================================================ */
+    @media (max-width: 820px){
+      /* 毛玻璃 → 純色(手機頻閃頭號殺手) */
+      .topbar{ backdrop-filter:none !important; -webkit-backdrop-filter:none !important; background:rgba(2,6,23,.97) !important; }
+      .modal-backdrop, .v-confirm-bg, .lvup-stage, .enhance-stage, .battle-result{
+        backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+      }
+      /* 寵物/坐騎旋轉模糊光環 → 關閉(多隻同時是 GPU 殺手) */
+      .creature-portrait::before{ display:none !important; }
+      .creature-portrait.stage-4::after{ animation:none !important; opacity:.16 !important; }
+      /* 背景掃光 / 面板裝飾無限動畫 → 關 */
+      .hero-panel::after{ display:none !important; }
+      .tier-chip.tier-10{ animation:none !important; }
+      .lvup-card::before{ animation:none !important; }
+      .radar-fill{ display:none !important; }
+      .ai-dot{ animation:none !important; }
+      /* 寵物本體動畫保留但降速,減少每秒重繪 */
+      .creature-portrait svg.anim-idle, .creature-portrait svg.anim-mount,
+      .creature-portrait svg.anim-fly,  .creature-portrait svg.anim-egg{ animation-duration: 4s !important; }
+      /* 觸控目標加大,點擊更好按 */
+      .btn.sm{ padding:8px 12px; font-size:13px; }
+      .tabs button{ padding:10px 12px; }
+    }
+    /* 尊重系統「減少動態效果」設定:停用裝飾性循環動畫(但保留一次性儀式的存在) */
+    @media (prefers-reduced-motion: reduce){
+      .creature-portrait::before, .hero-panel::after, .ai-dot,
+      .tier-chip.tier-10, .creature-portrait.stage-4::after{ animation:none !important; }
+    }
   </style>
 </head>
 <body>
@@ -1900,7 +1933,7 @@
       <button data-tab="achievements">成就 <span id="achvDot" style="display:none;width:6px;height:6px;border-radius:50%;background:#fbbf24;margin-left:4px;animation:ai-blink 1s ease-in-out infinite"></span></button>
       <button data-tab="reward">獎勵時間</button>
       <button data-tab="kpi">KPI 檔案</button>
-      <button data-tab="settings">設定 / 綁定</button>
+      <button data-tab="settings" style="display:none">設定 / 綁定</button>
     </div>
 
     <!-- Tab: 任務 -->
@@ -1915,14 +1948,14 @@
       </div>
       <!-- 四象限：艾森豪威爾優先級矩陣 -->
       <div class="card">
-        <h4 class="card-title">待執行任務 — 優先級四象限 <span class="tag" id="quadHint">標準模式</span></h4>
-        <div class="small muted" style="margin-bottom:10px">
-          <b style="color:#ef4444">紅</b>=重要且緊急 ｜
-          <b style="color:#f59e0b">黃</b>=重要不緊急 ｜
-          <b style="color:#3b82f6">藍</b>=不重要但緊急 ｜
-          <b style="color:#10b981">綠</b>=不重要不緊急。
-          <span id="quadDragHint" style="color:var(--text-mute)">階級未達「疾風執行官」，拖曳任務需家長核准。</span>
-        </div>
+        <h4 class="card-title" style="flex-wrap:wrap;gap:8px">
+          <span>🎯 今日任務 · 四象限</span>
+          <span style="display:inline-flex;gap:6px;align-items:center">
+            <button class="btn sm ghost" id="btnQuadHelp" style="padding:3px 10px;font-size:11px">ⓘ 說明</button>
+            <span class="tag" id="quadHint">標準</span>
+          </span>
+        </h4>
+        <span id="quadDragHint" style="display:none"></span>
         <div class="quad-grid">
           <div class="quad-cell q1" data-quad="q1"><div class="quad-head"><span class="dot"></span>紅｜重要且緊急</div><div class="quad-list" id="quadQ1"></div></div>
           <div class="quad-cell q2" data-quad="q2"><div class="quad-head"><span class="dot"></span>黃｜重要不緊急</div><div class="quad-list" id="quadQ2"></div></div>
@@ -7666,32 +7699,67 @@ const Sound = {
     const ctx = this.ensure(); if (!ctx) return;
     this.stopBgm();
     this.bgmGain = ctx.createGain();
-    this.bgmGain.gain.value = .04;
+    this.bgmGain.gain.value = .045;
     this.bgmGain.connect(ctx.destination);
-    // 三個 oscillator 緩慢漂移 — 形成深沉的科技墊
-    const freqs = [110, 165, 220];  // A2, E3, A3
-    freqs.forEach((f,i)=>{
-      const o = ctx.createOscillator();
-      o.type = i===2 ? "triangle" : "sine";
-      o.frequency.value = f;
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = .1 + i*.05;
-      const lfoGain = ctx.createGain();
-      lfoGain.gain.value = 2 + i;
-      lfo.connect(lfoGain);
-      lfoGain.connect(o.frequency);
-      o.connect(this.bgmGain);
-      o.start(); lfo.start();
-      this.bgmOsc.push(o, lfo);
-    });
+
+    // v5.0 輕快愉快的 8-bit 大調循環(C 大調,像可愛冒險遊戲的村莊音樂)
+    const N = { C:261.63, D:293.66, E:329.63, F:349.23, G:392.00, A:440.00, B:493.88, C2:523.25, D2:587.33, E2:659.25 };
+    // 歡快旋律(音高, 拍長);0 = 休止
+    const melody = [
+      [N.E2,1],[N.C2,1],[N.G,1],[N.C2,1], [N.A,1],[N.E2,1],[N.D2,1],[0,1],
+      [N.C2,1],[N.E2,1],[N.G,1],[N.A,1],   [N.G,1],[N.E,1],[N.C,2],[0,1],
+      [N.D2,1],[N.B,1],[N.G,1],[N.B,1],    [N.C2,1],[N.A,1],[N.F,1],[0,1],
+      [N.E,1],[N.G,1],[N.C2,1],[N.E2,1],   [N.D2,1],[N.G,1],[N.C2,2],[0,1],
+    ];
+    const bass = [N.C/2, N.G/2, N.A/2, N.F/2];  // 簡單低音線
+    const beat = 0.30;  // 每拍秒數(輕快)
+    let i = 0, bi = 0;
+
+    const tick = ()=>{
+      if (!this.bgmGain) return;
+      const t = ctx.currentTime;
+      const [note, dur] = melody[i % melody.length];
+      // 主旋律
+      if (note > 0){
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type = "triangle"; o.frequency.value = note;
+        o.connect(g); g.connect(this.bgmGain);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(.5, t + .015);
+        g.gain.exponentialRampToValueAtTime(.001, t + beat*dur*0.92);
+        o.start(t); o.stop(t + beat*dur);
+        // 加一個八度高音點綴(更亮)
+        const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+        o2.type = "square"; o2.frequency.value = note*2;
+        o2.connect(g2); g2.connect(this.bgmGain);
+        g2.gain.setValueAtTime(0, t);
+        g2.gain.linearRampToValueAtTime(.06, t + .01);
+        g2.gain.exponentialRampToValueAtTime(.001, t + beat*0.5);
+        o2.start(t); o2.stop(t + beat*0.6);
+      }
+      // 低音(每兩拍一個)
+      if (i % 2 === 0){
+        const bo = ctx.createOscillator(); const bg = ctx.createGain();
+        bo.type = "sine"; bo.frequency.value = bass[bi % bass.length]; bi++;
+        bo.connect(bg); bg.connect(this.bgmGain);
+        bg.gain.setValueAtTime(0, t);
+        bg.gain.linearRampToValueAtTime(.4, t + .02);
+        bg.gain.exponentialRampToValueAtTime(.001, t + beat*1.7);
+        bo.start(t); bo.stop(t + beat*2);
+      }
+      i++;
+    };
+    tick();
+    this._bgmTimer = setInterval(tick, beat * 1000);
   },
   stopBgm(){
+    if (this._bgmTimer){ clearInterval(this._bgmTimer); this._bgmTimer = null; }
     if (this.bgmGain){
-      try { this.bgmGain.gain.exponentialRampToValueAtTime(.001, this.ctx.currentTime+.4); } catch{}
+      try { this.bgmGain.gain.exponentialRampToValueAtTime(.001, this.ctx.currentTime+.3); } catch{}
+      this.bgmGain = null;
     }
-    this.bgmOsc.forEach(o => { try{o.stop(this.ctx.currentTime+.5)}catch{} });
+    this.bgmOsc.forEach(o => { try{o.stop()}catch{} });
     this.bgmOsc = [];
-    setTimeout(()=>{ this.bgmGain = null; }, 600);
   },
   toggleBgm(){ this.bgmOn = !this.bgmOn; lsSet("stb.bgmOn", this.bgmOn); if (this.bgmOn) this.startBgm(); else this.stopBgm(); updateSoundUi(); },
   toggleSfx(){ this.sfxOn = !this.sfxOn; lsSet("stb.sfxOn", this.sfxOn); updateSoundUi(); this.play("click"); },
@@ -8409,19 +8477,14 @@ function renderAiAnalysis(){
   ];
   items.push({ cls:"tier", icon:"勉", text: cheers[totalLv % cheers.length] });
 
-  // 只顯示最重要的 5 條（依優先順序：階級、戰鬥力、學業、連勝/速度、鼓勵）
-  const priority = ["tier","power","study","combo","speed","gear","pet","mount","kpi"];
-  const sorted = [];
-  // 抓 cheer (最後一筆 tier) 留到最後
-  const cheerItem = items[items.length-1];
+  // v5.0：只顯示兩排,隨機(每次進來看到不同的分析,保持新鮮感)
+  // 一定保留「鼓勵語」一條,另一條從其餘隨機抽
+  const cheerItem = items[items.length - 1];
   const others = items.slice(0, -1);
-  priority.forEach(cls => {
-    const it = others.find(x => x.cls === cls && !sorted.includes(x));
-    if (it && sorted.length < 4) sorted.push(it);
-  });
-  sorted.push(cheerItem);
+  const randomOne = others.length ? others[Math.floor(Math.random() * others.length)] : null;
+  const pick = [randomOne, cheerItem].filter(Boolean);
 
-  wrap.innerHTML = sorted.slice(0, 5).map(it => `
+  wrap.innerHTML = pick.map(it => `
     <div class="ai-item ${it.cls}">
       <div class="icon-box">${it.icon}</div>
       <div class="text">${it.text}</div>
@@ -10341,6 +10404,23 @@ async function resetSimChild(){
 document.getElementById("btnSimChild")?.addEventListener("click", enterSimChild);
 document.getElementById("btnExitSim")?.addEventListener("click", exitSimChild);
 document.getElementById("btnResetSim")?.addEventListener("click", resetSimChild);
+
+/* 四象限「ⓘ 說明」彈窗(說明收進按鈕,不佔版面) */
+document.getElementById("btnQuadHelp")?.addEventListener("click", ()=>{
+  const dragRule = document.getElementById("quadDragHint")?.textContent || "";
+  vConfirm({
+    color:"info", title:"優先級四象限 — 怎麼分類?", yes:"我懂了", no:"關閉",
+    body:`
+      <div style="line-height:2">
+        <div><b style="color:#ef4444">🔴 紅 · 重要且緊急</b><br><span class="small muted">最優先,現在就做(例:明天要交的作業)</span></div>
+        <div style="margin-top:6px"><b style="color:#f59e0b">🟡 黃 · 重要不緊急</b><br><span class="small muted">排進計畫,別拖到變緊急 — 這格是最該培養的好習慣</span></div>
+        <div style="margin-top:6px"><b style="color:#3b82f6">🔵 藍 · 不重要但緊急</b><br><span class="small muted">快速處理或請人幫忙</span></div>
+        <div style="margin-top:6px"><b style="color:#10b981">🟢 綠 · 不重要不緊急</b><br><span class="small muted">有空再做</span></div>
+      </div>
+      ${dragRule ? `<div class="small muted" style="margin-top:10px;border-top:1px dashed var(--border);padding-top:8px">${dragRule}</div>` : ""}
+    `,
+  });
+});
 
 (function bootstrap(){
   if (STATE.mode === "LOCAL"){
