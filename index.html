@@ -819,7 +819,8 @@
     .dungeon-card .req{font-size:11px;color:var(--text-mute);letter-spacing:.08em;margin-top:6px}
 
     /* 升級卷 / 道具卡 */
-    .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+    .shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media (max-width:480px){ .shop-grid{ grid-template-columns:repeat(2,1fr); } }
     .shop-card{
       padding:12px;border-radius:12px;background:var(--surface);border:1px solid var(--border-strong);
       display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;
@@ -1072,12 +1073,16 @@
 
     .hero-info-col{display:flex;flex-direction:column;gap:8px;min-width:0}
     .hero-info-col h2{margin:0;font-size:22px;font-weight:900;letter-spacing:.04em}
-    .currency-row{display:flex;gap:8px;flex-wrap:wrap}
+    /* v5.5 貨幣改方框(金幣/熔晶/連勝) */
+    .currency-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
     .currency-chip{
-      display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:10px;
-      background:var(--surface);border:1px solid var(--border-strong);font-family:var(--mono);font-weight:700;
+      display:flex;flex-direction:column;align-items:center;gap:3px;
+      padding:9px 4px;border-radius:12px;
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.15)),var(--surface);
+      border:1px solid var(--border-strong);font-family:var(--mono);font-weight:800;font-size:14px;
     }
-    .currency-chip .ic{width:18px;height:18px;flex:0 0 auto}
+    .currency-chip b{font-size:16px}
+    .currency-chip .ic{width:22px;height:22px;flex:0 0 auto}
     .currency-chip.coin{color:#fbbf24;border-color:rgba(251,191,36,.4)}
     .currency-chip.shard{color:#22d3ee;border-color:rgba(34,211,238,.4)}
     .currency-chip.exp{color:#84cc16;border-color:rgba(132,204,22,.4)}
@@ -1392,11 +1397,11 @@
       font-size:11px;color:var(--text-mute);letter-spacing:.1em;text-align:center;padding:4px 0;
     }
     .cal-cell{
-      aspect-ratio:1/1; border-radius:8px;
+      height:38px; border-radius:8px;
       background:rgba(15,23,42,.5);
       border:1px solid var(--border);
       display:flex;flex-direction:column;align-items:center;justify-content:center;
-      font-size:12px;color:var(--text-dim);position:relative;
+      font-size:13px;color:var(--text-dim);position:relative;
     }
     .cal-cell.empty{ background:transparent; border:none }
     .cal-cell.signed{
@@ -1975,19 +1980,20 @@
             <span class="stat-pill" style="border-color:rgba(245,158,11,.4);color:#fde68a">榮譽 <b id="cHonor">80</b></span>
             <span class="stat-pill" id="cHonorMode" style="color:var(--cyan)">標準模式</span>
           </div>
-
-          <div class="squad-row" id="squadRow">
-            <div class="squad-slot empty" id="squadPet">
-              <div class="squad-mini">—</div>
-              <div class="squad-info"><b>未派寵物</b><span class="role">PET</span></div>
-            </div>
-            <div class="squad-slot empty" id="squadMount">
-              <div class="squad-mini">—</div>
-              <div class="squad-info"><b>未派坐騎</b><span class="role">MOUNT</span></div>
-            </div>
-          </div>
         </div>
 
+      </div>
+
+      <!-- 出戰寵物/坐騎(在人物下方,全寬) -->
+      <div class="squad-row" id="squadRow">
+        <div class="squad-slot empty" id="squadPet">
+          <div class="squad-mini">—</div>
+          <div class="squad-info"><b>未派寵物</b><span class="role">PET</span></div>
+        </div>
+        <div class="squad-slot empty" id="squadMount">
+          <div class="squad-mini">—</div>
+          <div class="squad-info"><b>未派坐騎</b><span class="role">MOUNT</span></div>
+        </div>
       </div>
     </div>
 
@@ -2119,42 +2125,34 @@
     <!-- Tab: 寵物 -->
     <div class="tab-panel" data-tab="pet">
       <div class="card">
-        <h4 class="card-title">寵物孵化中心 <span class="tag">PET HATCHERY</span></h4>
-        <div class="small muted" style="margin-bottom:10px">使用金幣孵化寵物蛋，初始稀有度為 <b style="color:var(--r-green)">綠</b> / <b style="color:var(--r-blue)">藍</b> / <b style="color:var(--r-orange)">紫</b>。寵物滿級 (第 4 階) 可升級為 <b style="color:var(--r-red)">紅</b>，紫色滿級升為 <b style="color:var(--r-gold)">金</b>。</div>
-        <div class="row">
-          <button id="btnHatchPet" class="btn primary">花費 50 金幣孵化新寵物蛋</button>
-          <button id="btnFeedAllPet" class="btn cyan">給所有寵物 +50 EXP（每隻 15 金幣）</button>
-        </div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <h4 class="card-title">我的寵物 <span class="tag" id="petCount">0</span></h4>
+        <h4 class="card-title" style="flex-wrap:wrap;gap:8px">
+          <span>我的寵物 <span class="tag" id="petCount">0</span></span>
+          <button class="btn sm ghost" id="btnPetHelp" style="padding:3px 12px;font-size:11px">ⓘ 說明</button>
+        </h4>
         <div class="pet-row" id="petList"></div>
-        <div id="petEmpty" class="empty" style="display:none">尚無寵物，先去孵化中心領取第一顆蛋吧！</div>
+        <div id="petEmpty" class="empty" style="display:none">還沒有寵物!<br>去「副本」闖關、完成「成就」或每日「簽到」就有機會獲得寵物蛋 🥚</div>
       </div>
     </div>
 
     <!-- Tab: 坐騎 -->
     <div class="tab-panel" data-tab="mount">
       <div class="card">
-        <h4 class="card-title">坐騎培育中心 <span class="tag">MOUNT STABLE</span></h4>
-        <div class="small muted" style="margin-bottom:10px">坐騎培育需 <b>100 金幣</b>。坐騎可在副本提供更強的 buff（比寵物加成 50%）。坐騎也有 4 階進化：駿馬 / 戰龍 / 麒麟 / 機甲。</div>
-        <div class="row">
-          <button id="btnHatchMount" class="btn primary">花費 100 金幣培育新坐騎</button>
-          <button id="btnFeedAllMount" class="btn cyan">給所有坐騎 +80 EXP（每隻 25 金幣）</button>
-        </div>
-      </div>
-      <div class="card" style="margin-top:14px">
-        <h4 class="card-title">我的坐騎 <span class="tag" id="mountCount">0</span></h4>
+        <h4 class="card-title" style="flex-wrap:wrap;gap:8px">
+          <span>我的坐騎 <span class="tag" id="mountCount">0</span></span>
+          <button class="btn sm ghost" id="btnMountHelp" style="padding:3px 12px;font-size:11px">ⓘ 說明</button>
+        </h4>
         <div class="pet-row" id="mountList"></div>
-        <div id="mountEmpty" class="empty" style="display:none">尚無坐騎，先去培育中心領取第一顆坐騎蛋吧！</div>
+        <div id="mountEmpty" class="empty" style="display:none">還沒有坐騎!<br>挑戰高階「副本」、解鎖「成就」或連續「簽到」里程碑就有機會獲得坐騎蛋 🥚</div>
       </div>
     </div>
 
     <!-- Tab: 商店 -->
     <div class="tab-panel" data-tab="shop">
       <div class="card">
-        <h4 class="card-title">勇者商店 <span class="tag">SHOP</span></h4>
-        <div class="small muted" style="margin-bottom:10px">日常物資（藥水、升級卷、孵化券）用 <b style="color:var(--gold)">金幣</b>；裝備類道具用 <b style="color:#22d3ee">熔晶</b>（熔掉裝備獲得）。</div>
+        <h4 class="card-title" style="flex-wrap:wrap;gap:8px">
+          <span>勇者商店</span>
+          <button class="btn sm ghost" id="btnShopHelp" style="padding:3px 12px;font-size:11px">ⓘ 說明</button>
+        </h4>
         <div class="shop-grid" id="shopGrid"></div>
       </div>
     </div>
@@ -2197,8 +2195,8 @@
     </div>
 
     <!-- Tab: 每日簽到 -->
+    <!-- 簽到次分頁 ① 每日簽到 -->
     <div class="tab-panel" data-tab="checkin">
-      <!-- 上方統計 -->
       <div class="card">
         <h4 class="card-title">每日簽到 <span class="tag">DAILY</span></h4>
         <div class="ci-stats">
@@ -2210,33 +2208,37 @@
             <div class="sub" id="ciNextReward" style="margin-top:4px">明日：50 金幣</div>
           </div>
         </div>
-
-        <!-- 連續登入里程碑 -->
         <div style="margin-top:14px">
           <div class="small muted" style="margin-bottom:8px;letter-spacing:.1em">連續登入里程碑</div>
           <div class="milestone-row" id="ciMilestones"></div>
         </div>
       </div>
+    </div>
 
-      <!-- 本月日曆 -->
-      <div class="card" style="margin-top:14px">
-        <h4 class="card-title">本月日曆 <span class="tag" id="ciMonthLabel">—</span></h4>
+    <!-- 簽到次分頁 ② 本月日曆 -->
+    <div class="tab-panel" data-tab="cal">
+      <div class="card">
+        <h4 class="card-title" style="flex-wrap:wrap;gap:8px">
+          <span>本月日曆 <span class="tag" id="ciMonthLabel">—</span></span>
+          <button class="btn sm ghost" id="btnCalHelp" style="padding:3px 12px;font-size:11px">ⓘ 補簽說明</button>
+        </h4>
         <div class="calendar-wrap" id="ciCalendar"></div>
-        <div class="small muted" style="margin-top:10px">
-          ⓘ 漏掉的日子可用 <b style="color:#22d3ee">10 顆熔晶 / 天</b> 補簽（最多補 3 天）。錯過超過 3 天連續登入會從 0 重新計算。
-        </div>
       </div>
+    </div>
 
-      <!-- 每週 / 每月任務 -->
-      <div class="grid grid-2" style="margin-top:14px">
-        <div class="card">
-          <h4 class="card-title">本週任務 <span class="tag" id="ciWeekLabel">—</span></h4>
-          <div id="ciWeeklyTasks" class="stack"></div>
-        </div>
-        <div class="card">
-          <h4 class="card-title">本月任務 <span class="tag" id="ciMonthTaskLabel">—</span></h4>
-          <div id="ciMonthlyTasks" class="stack"></div>
-        </div>
+    <!-- 簽到次分頁 ③ 本週任務 -->
+    <div class="tab-panel" data-tab="weekly">
+      <div class="card">
+        <h4 class="card-title">本週任務 <span class="tag" id="ciWeekLabel">—</span></h4>
+        <div id="ciWeeklyTasks" class="stack"></div>
+      </div>
+    </div>
+
+    <!-- 簽到次分頁 ④ 本月任務 -->
+    <div class="tab-panel" data-tab="monthly">
+      <div class="card">
+        <h4 class="card-title">本月任務 <span class="tag" id="ciMonthTaskLabel">—</span></h4>
+        <div id="ciMonthlyTasks" class="stack"></div>
       </div>
     </div>
 
@@ -2396,7 +2398,7 @@
       <span class="bn-ic">🎮</span><span class="bn-tx">獎勵</span>
     </button>
     <button class="bn-item" data-nav="kpi">
-      <span class="bn-ic">📊</span><span class="bn-tx">KPI</span>
+      <span class="bn-ic">🌱</span><span class="bn-tx">成長</span>
     </button>
   </nav>
 </section>
@@ -6034,8 +6036,9 @@ function renderCreatureList(kind){
         <div class="small muted">EXP ${c.exp||0}/${need===9999?"MAX":need}</div>
         <div class="pet-progress bar"><span style="width:${pct}%;background:${rarityColor}"></span></div>
         <div class="row" style="gap:6px;margin-top:6px">
-          <button class="btn sm" data-id="${c.id}" data-kind="${kind}" data-act="feed">餵食 +${kind==='mount'?80:50} EXP (${kind==='mount'?25:15} 金幣)</button>
-          ${stage === 0 ? `<button class="btn sm primary" data-id="${c.id}" data-kind="${kind}" data-act="hatch">立即孵化 (${kind==='mount'?60:30} 金幣)</button>` : ""}
+          ${stage === 0
+            ? `<button class="btn sm primary" data-id="${c.id}" data-kind="${kind}" data-act="hatch">孵化(免費)</button>`
+            : (stage < 4 ? `<span class="small muted">闖副本、解成就、簽到即可成長 🌟</span>` : `<span class="badge gold">已滿級</span>`)}
         </div>
       </div>
     `;
@@ -6055,35 +6058,42 @@ async function creatureAction(kind, id, act){
   const expNeed = kind === "mount" ? MOUNT_STAGE_EXP_NEED : PET_STAGE_EXP_NEED;
   const lines = kind === "mount" ? MOUNT_LINES : PET_LINES;
 
-  const feedCost  = kind==="mount" ? 25 : 15;
-  const feedExp   = kind==="mount" ? 80 : 50;
-  const hatchCost = kind==="mount" ? 60 : 30;
+  if (act === "hatch"){
+    // v5.5:孵化免費(寵物坐騎靠副本/成就/簽到取得,不用買)
+    c.stage = 1; c.exp = 0;
+    try { Sound.play("evolve"); } catch {}
+    toast(`${creatureName(c)} 孵化成功！`, "success");
+  }
+  await dbSetChildProfile(p.childId, { [arrKey]: p[arrKey] });
+  if (STATE.mode === "LOCAL") await loadAllForChild(p.childId);
+  renderAll();
+}
 
-  if (act === "feed"){
-    if ((p.coins||0) < feedCost) return toast("金幣不足", "warn");
-    p.coins -= feedCost;
-    c.exp = (c.exp||0) + feedExp;
+/* v5.5:給出戰寵物/坐騎經驗(由副本通關、成就、簽到呼叫,取代花錢餵食) */
+async function gainCreatureExp(amount){
+  const p = STATE.childProfile; if (!p) return;
+  let changed = false;
+  const grow = (c, lines, expNeed)=>{
+    if (!c || c.stage === 0 || c.stage >= 4) return;
+    c.exp = (c.exp||0) + amount;
     while (c.stage < 4 && c.exp >= (expNeed[c.stage]||9999)){
       c.exp -= expNeed[c.stage];
       c.stage++;
-      // 滿級時稀有度升級
-      if (c.stage === 4){
-        const before = c.rarity;
-        c.rarity = upgradeFinalRarity(c.rarity);
-        toast(`${creatureName(c)} 進化完成！稀有度：${RARITY_NAME[before]} → ${RARITY_NAME[c.rarity]}！`, "success");
-      } else {
-        toast(`${creatureName(c)} 進化為 ${lines[c.species].names[c.stage-1]}！`, "success");
-      }
+      if (c.stage === 4){ const b=c.rarity; c.rarity = upgradeFinalRarity(c.rarity);
+        toast(`${creatureName(c)} 進化完成！${RARITY_NAME[b]} → ${RARITY_NAME[c.rarity]}！`, "success"); }
+      else toast(`${creatureName(c)} 進化為 ${lines[c.species].names[c.stage-1]}！`, "success");
     }
-  } else if (act === "hatch"){
-    if ((p.coins||0) < hatchCost) return toast("金幣不足", "warn");
-    p.coins -= hatchCost;
-    c.stage = 1; c.exp = 0;
-    toast(`${creatureName(c)} 孵化成功！`, "success");
+    changed = true;
+  };
+  // 只成長「出戰中」的寵物坐騎
+  const pet = (p.pets||[]).find(x => x.id === p.activePetId);
+  const mt  = (p.mounts||[]).find(x => x.id === p.activeMountId);
+  grow(pet, PET_LINES, PET_STAGE_EXP_NEED);
+  grow(mt,  MOUNT_LINES, MOUNT_STAGE_EXP_NEED);
+  if (changed){
+    await dbSetChildProfile(p.childId, { pets: p.pets, mounts: p.mounts });
+    if (STATE.mode === "LOCAL") await loadAllForChild(p.childId);
   }
-  await dbSetChildProfile(p.childId, { coins: p.coins, [arrKey]: p[arrKey] });
-  if (STATE.mode === "LOCAL") await loadAllForChild(p.childId);
-  renderAll();
 }
 
 $("#btnHatchPet")?.addEventListener("click", async ()=>{
@@ -6727,18 +6737,7 @@ const SHOP_ITEMS = [
   { id:"scroll_gold",   name:"金色祝福卷", desc:"100% +1 保證成功", currency:"shards", price:200,
     icon:`<svg viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="20" rx="2" fill="#fbbf24" stroke="#92400e"/><path d="M8 12 L24 12 M8 16 L24 16 M8 20 L18 20" stroke="#92400e" stroke-width="1.5"/><circle cx="26" cy="6" r="3" fill="#fef3c7"/></svg>`,
     apply:(p)=>{ p.scrolls = p.scrolls || {silver:0,blue:0,gold:0}; p.scrolls.gold++; } },
-  { id:"pet_egg",       name:"寵物蛋孵化券", desc:"立刻獲得一顆隨機寵物蛋", currency:"coins", price:80,
-    icon:`<svg viewBox="0 0 32 32"><ellipse cx="16" cy="18" rx="9" ry="11" fill="#fde68a" stroke="#0b1220"/><path d="M9 16 L12 14 L15 18 L18 14 L21 18 L24 14" stroke="#fbbf24" fill="none"/></svg>`,
-    apply:(p)=>{
-      const species = Object.keys(PET_LINES)[Math.floor(Math.random()*6)];
-      p.pets = p.pets || []; p.pets.push({ id:newId("pet"), kind:"pet", species, stage:0, exp:0, rarity:rollCreatureRarity() });
-    } },
-  { id:"mount_egg",     name:"坐騎培育蛋",  desc:"立刻獲得一顆隨機坐騎蛋", currency:"shards", price:120,
-    icon:`<svg viewBox="0 0 32 32"><ellipse cx="16" cy="18" rx="10" ry="12" fill="#a78bfa" stroke="#0b1220"/><path d="M9 16 L12 14 L15 18 L18 14 L21 18 L24 14" stroke="#581c87" fill="none"/></svg>`,
-    apply:(p)=>{
-      const species = Object.keys(MOUNT_LINES)[Math.floor(Math.random()*4)];
-      p.mounts = p.mounts || []; p.mounts.push({ id:newId("mt"), kind:"mount", species, stage:0, exp:0, rarity:rollCreatureRarity() });
-    } },
+  // v5.5:寵物蛋/坐騎蛋已移除 — 寵物坐騎只能透過副本/成就/簽到取得,不能用買的
 
   // ===== v3.9 商店擴充 =====
   { id:"potion_hp_big", name:"大型體力藥水", desc:"回復 200 點體力", currency:"coins", price:80,
@@ -10630,11 +10629,11 @@ document.getElementById("btnQuadHelp")?.addEventListener("click", ()=>{
    =========================================================== */
 const NAV = {
   task:      [["missions","任務"]],
-  role:      [["person","人物"],["gear","裝備"],["pet","寵物"],["mount","坐騎"]],
-  checkin:   [["checkin","簽到"]],
-  challenge: [["dungeon","副本"],["shop","商店"],["forge","研發部"]],
-  reward:    [["reward","獎勵時間"],["achievements","成就"]],
-  kpi:       [["kpi","KPI"]],
+  role:      [["person","人物"],["gear","裝備"],["forge","研發部"],["shop","商店"]],
+  checkin:   [["checkin","每日簽到"],["cal","本月日曆"],["weekly","本週任務"],["monthly","本月任務"]],
+  challenge: [["dungeon","副本"],["pet","寵物"],["mount","坐騎"]],
+  reward:    [["achievements","成就"],["reward","獎勵時間"]],
+  kpi:       [["kpi","成長"]],
 };
 let CUR_MAIN = "task", CUR_SUB = "missions";
 
@@ -10696,6 +10695,55 @@ document.getElementById("btnForgeHelp")?.addEventListener("click", ()=>{
     `,
   });
 });
+
+/* 本月日曆「ⓘ 補簽說明」彈窗 */
+document.getElementById("btnCalHelp")?.addEventListener("click", ()=>{
+  vConfirm({
+    color:"info", title:"補簽說明", yes:"我懂了", no:"關閉",
+    body:`漏掉的日子可用 <b style="color:#22d3ee">10 顆熔晶 / 天</b> 補簽(最多補 3 天)。<br>錯過超過 3 天,連續登入天數會從 0 重新計算喔!`,
+  });
+});
+
+/* 寵物 / 坐騎「ⓘ 說明」彈窗 */
+document.getElementById("btnPetHelp")?.addEventListener("click", ()=>{
+  vConfirm({ color:"info", title:"寵物怎麼來?怎麼長大?", yes:"我懂了", no:"關閉",
+    body:`
+      <div style="line-height:1.9">
+        寵物<b>不能用錢買</b>,要靠努力獲得:<br>
+        🗡️ 闖<b>副本</b>通關有機率掉落寵物蛋<br>
+        🏆 解鎖<b>成就</b>、連續<b>簽到</b>里程碑也會贈送<br><br>
+        孵化後,<b>帶牠出戰</b>去闖副本,牠會跟著一起變強(蛋→第4階)。<br>
+        初始稀有度 <b style="color:var(--r-green)">綠</b>/<b style="color:var(--r-blue)">藍</b>/<b style="color:var(--r-orange)">紫</b>,滿級後綠藍升 <b style="color:var(--r-red)">紅</b>、紫升 <b style="color:var(--r-gold)">金</b>。
+      </div>`,
+  });
+});
+document.getElementById("btnMountHelp")?.addEventListener("click", ()=>{
+  vConfirm({ color:"info", title:"坐騎怎麼來?", yes:"我懂了", no:"關閉",
+    body:`
+      <div style="line-height:1.9">
+        坐騎一樣<b>不能買</b>,要靠實力:<br>
+        🗡️ 挑戰<b>高階副本</b>有機率獲得坐騎蛋<br>
+        🏆 解鎖<b>成就</b>、長期<b>簽到</b>里程碑贈送<br><br>
+        坐騎 buff 比寵物<b>強 50%</b>。帶出戰闖副本一起成長!
+      </div>`,
+  });
+});
+
+/* 商店「ⓘ 說明」彈窗 */
+document.getElementById("btnShopHelp")?.addEventListener("click", ()=>{
+  vConfirm({ color:"info", title:"商店說明", yes:"我懂了", no:"關閉",
+    body:`日常物資(藥水、升級卷)用 <b style="color:var(--gold)">金幣</b>;<br>裝備類道具用 <b style="color:#22d3ee">熔晶</b>(熔掉不要的裝備可得熔晶)。<br><br><span class="small muted">寵物與坐騎無法購買,要靠闖副本、解成就、簽到取得喔!</span>`,
+  });
+});
+
+/* v5.5:副本通關 → 出戰寵物/坐騎成長(取代花錢餵食) */
+const _v55_endBattle = (typeof endBattle === "function") ? endBattle : null;
+if (_v55_endBattle){
+  endBattle = async function(win){
+    await _v55_endBattle(win);
+    if (win){ try { await gainCreatureExp(35); } catch {} }
+  };
+}
 
 /* AI 戰績分析:展開/收合(預設 2 條,展開看全部) */
 let _aiExpanded = false;
