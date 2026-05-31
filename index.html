@@ -7702,52 +7702,62 @@ const Sound = {
     this.bgmGain.gain.value = .045;
     this.bgmGain.connect(ctx.destination);
 
-    // v5.0 輕快愉快的 8-bit 大調循環(C 大調,像可愛冒險遊戲的村莊音樂)
-    const N = { C:261.63, D:293.66, E:329.63, F:349.23, G:392.00, A:440.00, B:493.88, C2:523.25, D2:587.33, E2:659.25 };
-    // 歡快旋律(音高, 拍長);0 = 休止
-    const melody = [
-      [N.E2,1],[N.C2,1],[N.G,1],[N.C2,1], [N.A,1],[N.E2,1],[N.D2,1],[0,1],
-      [N.C2,1],[N.E2,1],[N.G,1],[N.A,1],   [N.G,1],[N.E,1],[N.C,2],[0,1],
-      [N.D2,1],[N.B,1],[N.G,1],[N.B,1],    [N.C2,1],[N.A,1],[N.F,1],[0,1],
-      [N.E,1],[N.G,1],[N.C2,1],[N.E2,1],   [N.D2,1],[N.G,1],[N.C2,2],[0,1],
+    // v5.1 卡農 in D(Pachelbel's Canon,公共領域)— 輕快流動琶音版
+    const F = {
+      // 低音(大提琴)
+      D2:73.42, A1:55.00, B1:61.74, Fs1:46.25, G1:49.00,
+      // 中高音琶音
+      D3:146.83, Fs3:185.00, A3:220.00, B3:246.94, Cs4:277.18, E4:329.63, Fs4:369.99, G3:196.00,
+      D4:293.66, A4:440.00, B4:493.88, Cs5:554.37, D5:587.33, Fs5:739.99, E5:659.25, G4:392.00,
+    };
+    // 卡農經典和弦進行:D - A - Bm - F#m - G - D - G - A
+    // 每個和弦:低音根音 + 4 個八分音符上行琶音(輕快流動)
+    const prog = [
+      { bass:"D2",  arp:["D4","Fs4","A4","D5"]  },
+      { bass:"A1",  arp:["A3","Cs4","E4","A4"]  },
+      { bass:"B1",  arp:["B3","D4","Fs4","B4"]  },
+      { bass:"Fs1", arp:["Fs3","A3","Cs4","Fs4"]},
+      { bass:"G1",  arp:["G3","B3","D4","G4"]   },
+      { bass:"D2",  arp:["D4","Fs4","A4","D5"]  },
+      { bass:"G1",  arp:["G3","B3","D4","G4"]   },
+      { bass:"A1",  arp:["A3","Cs4","E4","A4"]  },
     ];
-    const bass = [N.C/2, N.G/2, N.A/2, N.F/2];  // 簡單低音線
-    const beat = 0.30;  // 每拍秒數(輕快)
-    let i = 0, bi = 0;
+    const beat = 0.46;            // 每個和弦的長度(輕快但不趕)
+    const eighth = beat / 4;      // 每拍 4 個八分音符
+    let ci = 0;
 
     const tick = ()=>{
       if (!this.bgmGain) return;
-      const t = ctx.currentTime;
-      const [note, dur] = melody[i % melody.length];
-      // 主旋律
-      if (note > 0){
+      const t0 = ctx.currentTime;
+      const ch = prog[ci % prog.length];
+      // 低音根音(溫暖長音)
+      const bo = ctx.createOscillator(); const bg = ctx.createGain();
+      bo.type = "sine"; bo.frequency.value = F[ch.bass];
+      bo.connect(bg); bg.connect(this.bgmGain);
+      bg.gain.setValueAtTime(0, t0);
+      bg.gain.linearRampToValueAtTime(.42, t0 + .03);
+      bg.gain.exponentialRampToValueAtTime(.001, t0 + beat*0.96);
+      bo.start(t0); bo.stop(t0 + beat);
+      // 4 個八分音符琶音(卡農的流動感)
+      ch.arp.forEach((n, k)=>{
+        const t = t0 + k*eighth;
         const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.type = "triangle"; o.frequency.value = note;
+        o.type = "triangle"; o.frequency.value = F[n];
         o.connect(g); g.connect(this.bgmGain);
         g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(.5, t + .015);
-        g.gain.exponentialRampToValueAtTime(.001, t + beat*dur*0.92);
-        o.start(t); o.stop(t + beat*dur);
-        // 加一個八度高音點綴(更亮)
+        g.gain.linearRampToValueAtTime(.34, t + .01);
+        g.gain.exponentialRampToValueAtTime(.001, t + eighth*0.95);
+        o.start(t); o.stop(t + eighth);
+        // 高八度亮點(像鈴聲,輕快)
         const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
-        o2.type = "square"; o2.frequency.value = note*2;
+        o2.type = "square"; o2.frequency.value = F[n]*2;
         o2.connect(g2); g2.connect(this.bgmGain);
         g2.gain.setValueAtTime(0, t);
-        g2.gain.linearRampToValueAtTime(.06, t + .01);
-        g2.gain.exponentialRampToValueAtTime(.001, t + beat*0.5);
-        o2.start(t); o2.stop(t + beat*0.6);
-      }
-      // 低音(每兩拍一個)
-      if (i % 2 === 0){
-        const bo = ctx.createOscillator(); const bg = ctx.createGain();
-        bo.type = "sine"; bo.frequency.value = bass[bi % bass.length]; bi++;
-        bo.connect(bg); bg.connect(this.bgmGain);
-        bg.gain.setValueAtTime(0, t);
-        bg.gain.linearRampToValueAtTime(.4, t + .02);
-        bg.gain.exponentialRampToValueAtTime(.001, t + beat*1.7);
-        bo.start(t); bo.stop(t + beat*2);
-      }
-      i++;
+        g2.gain.linearRampToValueAtTime(.035, t + .005);
+        g2.gain.exponentialRampToValueAtTime(.001, t + eighth*0.5);
+        o2.start(t); o2.stop(t + eighth*0.6);
+      });
+      ci++;
     };
     tick();
     this._bgmTimer = setInterval(tick, beat * 1000);
