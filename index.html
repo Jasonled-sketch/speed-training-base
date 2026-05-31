@@ -1216,7 +1216,23 @@
     }
 
     /* 音樂控制按鈕 */
-    .sound-ctrl{position:fixed;right:14px;bottom:14px;z-index:99;display:flex;gap:8px}
+    .sound-ctrl{position:fixed;right:12px;bottom:74px;z-index:99;display:flex;gap:8px}
+    /* 桌機/家長端可拉回低一點(無底部導覽列) */
+    @media (min-width:900px){ .sound-ctrl{ bottom:18px } }
+
+    /* ====== v5.5 次分頁列 ====== */
+    .sub-nav{
+      display:flex; gap:6px; overflow-x:auto; padding:6px 2px 8px; margin-bottom:10px;
+      border-bottom:1px solid var(--border); -webkit-overflow-scrolling:touch;
+    }
+    .sub-nav::-webkit-scrollbar{ height:0 }
+    .subnav-item{
+      flex:0 0 auto; padding:7px 16px; border-radius:999px;
+      background:var(--surface); border:1px solid var(--border-strong);
+      color:var(--text-dim); cursor:pointer; font-weight:700; font-size:13px; white-space:nowrap;
+      transition:all .12s;
+    }
+    .subnav-item.active{ background:var(--cyan); color:#0b1220; border-color:transparent; }
     .sound-ctrl button{
       width:44px;height:44px;border-radius:50%;border:1px solid var(--border-strong);
       background:var(--surface-2);color:var(--text);cursor:pointer;
@@ -1907,7 +1923,10 @@
       <button class="btn sm cyan right" id="btnInstallChild">安裝到桌面</button>
     </div>
 
-    <!-- RPG 主面板 v3.6：封號 + 立繪 + LV 同框｜中：屬性｜右：AI 戰績分析 -->
+    <!-- 次分頁列(依底部主項動態填入,單一次分頁時隱藏) -->
+    <div class="sub-nav" id="childSubNav" style="display:none"></div>
+
+    <!-- RPG 主面板 v3.6：封號 + 立繪 + LV 同框 -->
     <div class="hero-panel">
       <div class="hero-grid-v36">
 
@@ -2052,26 +2071,6 @@
         </div>
       </div>
 
-      <!-- 冒險樂園入口(完成任務後的獎勵系統) -->
-      <div class="card" style="margin-top:14px">
-        <h4 class="card-title">冒險樂園 <span class="tag">任務獎勵</span></h4>
-        <div class="adv-grid">
-          <button class="adv-entry" data-adv="dungeon"><span class="av-ic">⚔️</span><span>副本闖關</span></button>
-          <button class="adv-entry" data-adv="gear"><span class="av-ic">🛡️</span><span>裝備背包</span></button>
-          <button class="adv-entry" data-adv="pet"><span class="av-ic">🐾</span><span>寵物</span></button>
-          <button class="adv-entry" data-adv="mount"><span class="av-ic">🐎</span><span>坐騎</span></button>
-          <button class="adv-entry" data-adv="shop"><span class="av-ic">🛒</span><span>商店</span></button>
-          <button class="adv-entry" data-adv="forge"><span class="av-ic">🔨</span><span>研發部</span></button>
-        </div>
-      </div>
-
-      <!-- AI 戰績分析(移到角色頁底部) -->
-      <div class="card" style="margin-top:14px">
-        <div class="ai-panel" style="border:none;padding:0;background:none">
-          <div class="ai-head"><span class="ai-dot"></span><b>AI 戰績分析</b></div>
-          <div id="cAiAnalysis" class="ai-list"></div>
-        </div>
-      </div>
     </div>
 
     <!-- Tab: 副本闖關 -->
@@ -2163,13 +2162,10 @@
     <!-- Tab: 研發部 -->
     <div class="tab-panel" data-tab="forge">
       <div class="card">
-        <h4 class="card-title">武器研發部 <span class="tag">FORGE</span></h4>
-        <div class="small muted" style="margin-bottom:10px">
-          選一件裝備強化到 <b>+9</b>。升級卷三種：
-          <span class="badge" style="background:#94a3b8;color:#0b1220">銀卷</span>30% 升 / 30% 維持 / 30% 降 / 10% 爆掉、
-          <span class="badge" style="background:#3b82f6;color:#0b1220">藍卷</span>60% 升 / 30% 維持 / 10% 降、
-          <span class="badge gold">金卷</span>100% 升。
-        </div>
+        <h4 class="card-title" style="flex-wrap:wrap;gap:8px">
+          <span>武器研發部</span>
+          <button class="btn sm ghost" id="btnForgeHelp" style="padding:3px 12px;font-size:11px">ⓘ 說明</button>
+        </h4>
         <div class="forge">
           <div class="forge-slot has" id="forgeTarget">
             <div class="small muted">尚未選擇裝備</div>
@@ -2246,7 +2242,15 @@
 
     <!-- Tab: 成就 -->
     <div class="tab-panel" data-tab="achievements">
+      <!-- AI 戰績分析(預設 2 條,可展開看 6 條) -->
       <div class="card">
+        <h4 class="card-title">
+          <span><span class="ai-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22d3ee;margin-right:6px"></span>AI 戰績分析</span>
+          <button class="btn sm ghost" id="btnAiToggle" style="padding:3px 12px;font-size:11px">展開 ▾</button>
+        </h4>
+        <div id="cAiAnalysis" class="ai-list"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
         <h4 class="card-title">成就系統 <span class="tag" id="achvSummary">0 / 0</span></h4>
         <div class="achv-cats" id="achvCats"></div>
         <div class="achv-list" id="achvList" style="margin-top:12px"></div>
@@ -2374,16 +2378,19 @@
 
   <!-- 底部固定導覽列(像 App) -->
   <nav class="bottom-nav" id="childBottomNav">
-    <button class="bn-item active" data-nav="role">
-      <span class="bn-ic">🏠</span><span class="bn-tx">角色</span>
+    <button class="bn-item active" data-nav="task">
+      <span class="bn-ic">🎯</span><span class="bn-tx">任務</span>
     </button>
-    <button class="bn-item" data-nav="achievements">
-      <span class="bn-ic">🏆</span><span class="bn-tx">成就</span>
+    <button class="bn-item" data-nav="role">
+      <span class="bn-ic">🧙</span><span class="bn-tx">角色</span>
       <span class="bn-dot" id="bnAchvDot" style="display:none"></span>
     </button>
     <button class="bn-item" data-nav="checkin">
       <span class="bn-ic">📅</span><span class="bn-tx">簽到</span>
       <span class="bn-dot" id="bnCheckinDot" style="display:none"></span>
+    </button>
+    <button class="bn-item" data-nav="challenge">
+      <span class="bn-ic">⚔️</span><span class="bn-tx">挑戰</span>
     </button>
     <button class="bn-item" data-nav="reward">
       <span class="bn-ic">🎮</span><span class="bn-tx">獎勵</span>
@@ -2888,7 +2895,11 @@ function newId(prefix){ return prefix + "_" + Math.random().toString(36).slice(2
    =========================================================== */
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-const todayKey = () => new Date().toISOString().slice(0,10);
+// v5.5 用「本地」日期(不是 UTC),避免台灣 UTC+8 凌晨時段日期差一天導致月曆/簽到失真
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
 const fmtMMSS = (sec) => {
   sec = Math.max(0, Math.round(sec));
   const m = Math.floor(sec/60).toString().padStart(2,"0");
@@ -8618,12 +8629,16 @@ function renderAiAnalysis(){
   ];
   items.push({ cls:"tier", icon:"勉", text: cheers[totalLv % cheers.length] });
 
-  // v5.0：只顯示兩排,隨機(每次進來看到不同的分析,保持新鮮感)
-  // 一定保留「鼓勵語」一條,另一條從其餘隨機抽
+  // v5.5：收合時顯示 2 條(隨機+鼓勵語),展開時顯示全部
   const cheerItem = items[items.length - 1];
   const others = items.slice(0, -1);
-  const randomOne = others.length ? others[Math.floor(Math.random() * others.length)] : null;
-  const pick = [randomOne, cheerItem].filter(Boolean);
+  let pick;
+  if (typeof _aiExpanded !== "undefined" && _aiExpanded){
+    pick = items;  // 展開:全部(約 6+ 條)
+  } else {
+    const randomOne = others.length ? others[Math.floor(Math.random() * others.length)] : null;
+    pick = [randomOne, cheerItem].filter(Boolean);
+  }
 
   wrap.innerHTML = pick.map(it => `
     <div class="ai-item ${it.cls}">
@@ -8645,7 +8660,7 @@ renderQuadTask = function(t){
   const el = document.createElement("div");
   el.className = "quad-task" + (t.pendingPriorityMove ? " pending" : "");
   el.dataset.id = t.taskId;
-  el.style.touchAction = "none";   // 讓觸控拖曳不被瀏覽器捲動搶走
+  // 整卡可捲動;只有「⠿」把手 touch-action:none 供拖曳
   el.innerHTML = `
     <div class="row-1">
       <span class="drag-grip" title="拖曳調整優先級">⠿</span>
@@ -8749,15 +8764,19 @@ bindQuadDnD = function(){
       if (wasActive && cell) applyQuadMove(taskId, cell.dataset.quad);
     };
 
-    card.addEventListener("pointerdown", (e)=>{
-      if (e.target.closest("button")) return;   // 點按鈕不啟動拖曳
-      sx = e.clientX; sy = e.clientY;
-      active = false; lastCell = null;
-      window.addEventListener("pointermove", onMove, { passive:false });
-      window.addEventListener("pointerup", onUp);
-      window.addEventListener("pointercancel", cleanup);
-      pressTimer = setTimeout(()=> start(e.clientX, e.clientY), 140);  // 長按 140ms 也啟動
-    });
+    // v5.5:只在「⠿」把手上才能啟動拖曳(避免滑動誤觸)
+    const grip = card.querySelector(".drag-grip");
+    if (grip){
+      grip.addEventListener("pointerdown", (e)=>{
+        e.preventDefault(); e.stopPropagation();
+        sx = e.clientX; sy = e.clientY;
+        active = false; lastCell = null;
+        window.addEventListener("pointermove", onMove, { passive:false });
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", cleanup);
+        start(e.clientX, e.clientY);   // 按住把手即進入拖曳
+      });
+    }
   });
 };
 
@@ -10606,34 +10625,54 @@ document.getElementById("btnQuadHelp")?.addEventListener("click", ()=>{
 });
 
 /* ===========================================================
-   v5.4 孩子端底部導覽列切換(取代頂部 12 分頁)
-   底部 5 主項:角色/成就/簽到/獎勵/KPI
-   「角色」頁含四象限主軸 + 冒險入口(副本/裝備/寵物/坐騎/商店/研發)
+   v5.5 孩子端兩層導覽(底部 6 主項 + 動態次分頁)
+   任務 / 角色(人物·裝備·寵物·坐騎) / 簽到 / 挑戰(副本·商店·研發) / 獎勵(獎勵·成就) / KPI
    =========================================================== */
-function childNavTo(nav){
-  const advKeys = ["dungeon","gear","pet","mount","shop","forge"];
-  const isAdv = advKeys.includes(nav);
-  const mainMap = { role:"missions", achievements:"achievements", checkin:"checkin", reward:"reward", kpi:"kpi" };
-  const targetTab = isAdv ? nav : (mainMap[nav] || "missions");
+const NAV = {
+  task:      [["missions","任務"]],
+  role:      [["person","人物"],["gear","裝備"],["pet","寵物"],["mount","坐騎"]],
+  checkin:   [["checkin","簽到"]],
+  challenge: [["dungeon","副本"],["shop","商店"],["forge","研發部"]],
+  reward:    [["reward","獎勵時間"],["achievements","成就"]],
+  kpi:       [["kpi","KPI"]],
+};
+let CUR_MAIN = "task", CUR_SUB = "missions";
 
-  // 立繪 hero panel 只在「角色」頁顯示
-  const heroPanel = document.querySelector("#screen-child .hero-panel");
-  if (heroPanel) heroPanel.style.display = (nav === "role") ? "" : "none";
+function childNavTo(main, sub){
+  const subs = NAV[main]; if (!subs) return;
+  if (!sub || !subs.some(s => s[0] === sub)) sub = subs[0][0];
+  CUR_MAIN = main; CUR_SUB = sub;
 
-  // 顯示對應內容 panel
-  document.querySelectorAll("#screen-child .tab-panel").forEach(p=>{
-    p.classList.toggle("active", p.dataset.tab === targetTab);
-  });
+  // 隱藏 hero panel 與所有內容 panel
+  const hero = document.querySelector("#screen-child .hero-panel");
+  if (hero) hero.style.display = "none";
+  document.querySelectorAll("#screen-child .tab-panel").forEach(p => p.classList.remove("active"));
 
-  // 冒險子頁顯示「返回角色」浮鈕
+  // 顯示目標(person = 立繪面板;其餘 = 對應 tab-panel)
+  if (sub === "person"){
+    if (hero) hero.style.display = "";
+  } else {
+    const tp = document.querySelector(`#screen-child .tab-panel[data-tab="${sub}"]`);
+    if (tp) tp.classList.add("active");
+  }
+
+  // 次分頁列(僅多於一個次分頁時顯示)
+  const bar = document.getElementById("childSubNav");
+  if (bar){
+    if (subs.length > 1){
+      bar.style.display = "flex";
+      bar.innerHTML = subs.map(([k,l]) => `<button class="subnav-item ${k===sub?'active':''}" data-sub="${k}">${l}</button>`).join("");
+      bar.querySelectorAll("button").forEach(b => b.addEventListener("click", ()=> childNavTo(main, b.dataset.sub)));
+    } else {
+      bar.style.display = "none"; bar.innerHTML = "";
+    }
+  }
+
+  // 底部列 highlight
+  document.querySelectorAll("#childBottomNav .bn-item").forEach(b => b.classList.toggle("active", b.dataset.nav === main));
+  // 隱藏舊的返回浮鈕(次分頁已取代)
   const backBtn = document.getElementById("childAdvBack");
-  if (backBtn) backBtn.style.display = isAdv ? "" : "none";
-
-  // 底部列 highlight(進冒險子頁時仍 highlight 角色)
-  const activeNav = isAdv ? "role" : nav;
-  document.querySelectorAll("#childBottomNav .bn-item").forEach(b=>{
-    b.classList.toggle("active", b.dataset.nav === activeNav);
-  });
+  if (backBtn) backBtn.style.display = "none";
 
   window.scrollTo(0, 0);
   try { Sound.play("soft"); } catch {}
@@ -10641,25 +10680,53 @@ function childNavTo(nav){
 document.querySelectorAll("#childBottomNav .bn-item").forEach(b=>{
   b.addEventListener("click", ()=> childNavTo(b.dataset.nav));
 });
-document.querySelectorAll(".adv-entry").forEach(b=>{
-  b.addEventListener("click", ()=> childNavTo(b.dataset.adv));
-});
-document.getElementById("childAdvBack")?.addEventListener("click", ()=> childNavTo("role"));
 
-/* 底部紅點同步(今日未簽到 / 成就可領) */
-function syncBottomDots(){
-  [["checkinDot","bnCheckinDot"], ["achvDot","bnAchvDot"]].forEach(([src,dst])=>{
-    const s = document.getElementById(src), d = document.getElementById(dst);
-    if (s && d){
-      const on = s.style.display && s.style.display !== "none";
-      d.style.display = on ? "block" : "none";
-    }
+/* 研發部「ⓘ 說明」彈窗 */
+document.getElementById("btnForgeHelp")?.addEventListener("click", ()=>{
+  vConfirm({
+    color:"info", title:"武器研發部 — 強化說明", yes:"我懂了", no:"關閉",
+    body:`
+      <div style="line-height:1.9">
+        選一件背包裝備,搭配升級卷強化到 <b>+9</b>。每 +1 提升該裝備屬性。<br><br>
+        <div><span class="badge" style="background:#94a3b8;color:#0b1220">銀卷</span> 30% 升 / 30% 維持 / 30% 降 / <b style="color:#ef4444">10% 爆掉</b></div>
+        <div style="margin-top:4px"><span class="badge" style="background:#3b82f6;color:#0b1220">藍卷</span> 60% 升 / 30% 維持 / 10% 降(不爆)</div>
+        <div style="margin-top:4px"><span class="badge gold">金卷</span> <b style="color:#fbbf24">100% 保證 +1</b></div>
+        <div class="small muted" style="margin-top:8px">穿戴中的裝備無法強化/熔掉,請先卸下。</div>
+      </div>
+    `,
   });
+});
+
+/* AI 戰績分析:展開/收合(預設 2 條,展開看全部) */
+let _aiExpanded = false;
+document.getElementById("btnAiToggle")?.addEventListener("click", ()=>{
+  _aiExpanded = !_aiExpanded;
+  const btn = document.getElementById("btnAiToggle");
+  if (btn) btn.textContent = _aiExpanded ? "收合 ▴" : "展開 ▾";
+  try { renderAiAnalysis(); } catch {}
+});
+
+/* 底部紅點同步(今日未簽到 → 角色?其實簽到獨立;成就可領 → 角色燈) */
+function syncBottomDots(){
+  // 成就可領 → 「角色」底部燈(成就在獎勵頁,但用角色燈提醒太遠;改用獎勵?簡化:成就燈掛在角色)
+  const ad = document.getElementById("achvDot"), bad = document.getElementById("bnAchvDot");
+  if (ad && bad){ bad.style.display = (ad.style.display && ad.style.display!=="none") ? "block" : "none"; }
+  const cd = document.getElementById("checkinDot"), bcd = document.getElementById("bnCheckinDot");
+  if (cd && bcd){ bcd.style.display = (cd.style.display && cd.style.display!=="none") ? "block" : "none"; }
 }
-const _v54_renderChildAll = renderChildAll;
+const _v55_renderChildAll = renderChildAll;
 renderChildAll = function(){
-  _v54_renderChildAll();
+  _v55_renderChildAll();
   try { syncBottomDots(); } catch {}
+};
+
+/* 進入孩子端時預設停在「任務」主軸 */
+const _v55_enterRoleScreen = enterRoleScreen;
+enterRoleScreen = async function(){
+  await _v55_enterRoleScreen();
+  if (STATE.user?.role === "child"){
+    try { childNavTo("task"); } catch {}
+  }
 };
 
 (function bootstrap(){
